@@ -1,49 +1,47 @@
 package main
 
-type Hub struct {
-	// Register requests.
-	register chan MsgChan
+type BufferOverflowError struct{}
 
-	// Unregister requests.
-	unregister chan MsgChan
-
-	// Inbound messages.
-	broadcast MsgChan
-
-	// Registered outbound channels.
-	sends map[MsgChan]bool
+func (err *BufferOverflowError) Error() string {
+	return "Listener's buffer overflowed."
 }
 
-func newHub() *Hub {
-	return &Hub{
-		register:   make(chan MsgChan),
-		unregister: make(chan MsgChan),
-		broadcast:  make(MsgChan),
-		sends:      make(map[MsgChan]bool),
-	}
+type Listener struct {
+	sendChan chan<- []byte
+	errSig   *ErrorSignal
 }
 
-// run broadcasts messages to the set of active outbound channels,
-// and handles requests to register or unregister outbound channels.
-func (hub *Hub) run() {
+// Register a Listener
+type Register struct {
+	li *Listener
+}
+
+// Unregister a Listener
+type Unregister struct {
+	li *Listener
+}
+
+// Broadcast a websocket message to all Listeners
+type Broadcast struct {
+	message []byte
+}
+
+// hub runs a loop that handles Register, Unregister, and Broadcast messages.
+func hub(in <-chan interface{}) {
+	listeners := make(map[*Listener]bool)
 	for {
-		select {
-		case send := <-hub.register:
-			hub.sends[send] = true
-		case send := <-hub.unregister:
-			if _, ok := hub.sends[send]; ok {
-				delete(hub.sends, send)
-				close(send)
-			}
-		case message := <-hub.broadcast:
-			for send := range hub.sends {
+		switch m := (<-in).(type) {
+		case *Register:
+			listeners[m.li] = true
+		case *Unregister:
+			delete(listeners, m.li)
+		case *Broadcast:
+			for li := range listeners {
 				select {
-				case send <- message:
+				case li.sendChan <- m.message:
 				default:
-					close(send)
-					delete(hub.sends, send)
-					// TODO: Think about this a bit more.
-					// Is this the right thing to do when client's send buffer is full?
+					li.errSig.Close(&BufferOverflowError{})
+					delete(listeners, li)
 				}
 			}
 		}

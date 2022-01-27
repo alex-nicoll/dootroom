@@ -8,34 +8,44 @@ import (
 	"dootroom.com/main/internal"
 )
 
-// readPump should copy messages to the broadcast channel in order.
-// readPump should call conn.Close() and unregister() when the connection errors out.
+// readPump should copy messages to hubChan in order.
+// readPump should close the error signal when the connection errors out.
 func Test_readPump(t *testing.T) {
+	errSig := NewErrorSignal()
 	messagesIn := [3][]byte{[]byte{0}, []byte{1}, []byte{2}}
 	conn := &internal.MockConn{MessagesIn: messagesIn[:]}
-	broadcast := make(chan []byte)
-	didUnregister := false
+	hubChan := make(chan interface{})
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		readPump(conn, broadcast, func() { didUnregister = true })
+		readPump(errSig, conn, hubChan)
 	}()
 
-	messagesBcast := [3][]byte{<-broadcast, <-broadcast, <-broadcast}
+	messagesHubChan := [3]interface{}{<-hubChan, <-hubChan, <-hubChan}
 	for i := 0; i <= 2; i++ {
-		if bytes.Compare(messagesIn[i], messagesBcast[i]) != 0 {
-			t.Errorf("message: Expected %v, got %v", messagesIn[i], messagesBcast[i])
+		message := messagesHubChan[i].(*Broadcast).message
+		if bytes.Compare(messagesIn[i], message) != 0 {
+			t.Errorf("message: Expected %v, got %v", messagesIn[i], message)
 		}
 	}
 
 	wg.Wait()
-	if !conn.IsClosed {
-		t.Errorf("connection closed: Expected %v, got %v", true, false)
+
+	select {
+	case <-errSig.Done():
+		if _, ok := errSig.Err().(*internal.MockCloseError); !ok {
+			t.Errorf("Closed the error signal, but with the wrong error")
+		}
+	default:
+		t.Errorf("Didn't close the error signal")
 	}
-	if !didUnregister {
-		t.Errorf("unregistered: Expected %v, got %v", true, false)
-	}
+
 	return
+}
+
+// readPump should stop when the error signal is closed.
+func Test_readPump2(t *testing.T) {
+	// TODO
 }

@@ -1,9 +1,14 @@
 package internal
 
 import (
-	"errors"
 	"time"
 )
+
+type MockCloseError struct{}
+
+func (err *MockCloseError) Error() string {
+	return "Client closed the connection."
+}
 
 type MockConn struct {
 	MessagesIn  [][]byte
@@ -11,12 +16,17 @@ type MockConn struct {
 	// Number of outgoing messages after which WriteMessage returns an error
 	MessagesOutLimit int
 	IsClosed         bool
+	OnReadMessage    func()
+	OnWriteMessage   func()
 }
 
 func (conn *MockConn) ReadMessage() (messageType int, p []byte, err error) {
-	time.Sleep(5*10 ^ 7) // 50ms
+	if conn.OnReadMessage != nil {
+		conn.OnReadMessage()
+	}
+	time.Sleep(50 * time.Millisecond)
 	if len(conn.MessagesIn) == 0 {
-		return 0, nil, errors.New("Client closed the connection.")
+		return 0, nil, &MockCloseError{}
 	}
 	message := conn.MessagesIn[0]
 	conn.MessagesIn = conn.MessagesIn[1:]
@@ -24,9 +34,12 @@ func (conn *MockConn) ReadMessage() (messageType int, p []byte, err error) {
 }
 
 func (conn *MockConn) WriteMessage(messageType int, data []byte) error {
-	time.Sleep(5*10 ^ 7) // 50ms
+	if conn.OnWriteMessage != nil {
+		conn.OnWriteMessage()
+	}
+	time.Sleep(50 * time.Millisecond)
 	if len(conn.MessagesOut) == conn.MessagesOutLimit {
-		return errors.New("Client closed the connection.")
+		return &MockCloseError{}
 	}
 	conn.MessagesOut = append(conn.MessagesOut, data)
 	return nil

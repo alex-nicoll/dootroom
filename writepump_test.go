@@ -8,34 +8,40 @@ import (
 )
 
 // writePump should copy messages to the websocket connection in order.
-// writePump should call conn.Close() when the connection errors out.
+// writePump should close the error signal when the connection errors out.
 func Test_writePump(t *testing.T) {
+	errSig := NewErrorSignal()
 	messagesRecvd := [4][]byte{[]byte{0}, []byte{1}, []byte{2}, []byte{3}}
-	send := make(chan []byte, 4)
+	sendChan := make(chan []byte, 4)
 	for _, m := range messagesRecvd {
-		send <- m
+		sendChan <- m
 	}
 	conn := &internal.MockConn{MessagesOutLimit: 3}
 
 	// Call writePump in this goroutine. It shouldn't block, because there are
 	// 4 messages in the channel, and an error will be thrown after the first 3
 	// messages are written to the connection.
-	writePump(send, conn)
+	writePump(errSig, sendChan, conn)
 
 	for i := 0; i <= 2; i++ {
 		if bytes.Compare(messagesRecvd[i], conn.MessagesOut[i]) != 0 {
-			t.Errorf("message: Expected %v, got %v", messagesRecvd[i], conn.messagesOut[i])
+			t.Errorf("message: Expected %v, got %v", messagesRecvd[i], conn.MessagesOut[i])
 		}
 	}
-	if len(conn.MessagesOut) > 3 {
-		t.Errorf("messages written: Expected %v, got %v", 3, len(conn.MessagesOut))
+
+	select {
+	case <-errSig.Done():
+		if _, ok := errSig.Err().(*internal.MockCloseError); !ok {
+			t.Errorf("readPump closed the error signal, but with the wrong error")
+		}
+	default:
+		t.Errorf("readPump didn't close the error signal")
 	}
-	if !conn.IsClosed {
-		t.Errorf("connection closed: Expected %v, got %v", true, false)
-	}
+
+	return
 }
 
-// writePump should call conn.Close() when the send channel is closed.
+// writePump should stop when the error signal is closed.
 func Test_writePump2(t *testing.T) {
 	// TODO
 }

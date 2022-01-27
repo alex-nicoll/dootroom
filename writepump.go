@@ -1,42 +1,25 @@
 package main
 
 import (
-	"log"
-
 	"github.com/gorilla/websocket"
 )
 
-// ConnWriter exists to (mostly) decouple writePump from the websocket library.
+// ConnWriter decouples writePump from websocket.Conn for testing purposes.
 type ConnWriter interface {
 	WriteMessage(messageType int, data []byte) error
-	Close() error
 }
 
-// writePump pumps messages from send to conn.
-//
-// A goroutine running writePump is started for each connection. The
-// application ensures that there is at most one writer on a connection by
-// executing all writes from this goroutine.
-func writePump(send MsgChan, conn ConnWriter) {
-	defer func() {
-		err := conn.Close()
-		if err != nil {
-			log.Println("writepump Close() " + err.Error())
-		}
-	}()
+// writePump runs a loop that copies messages from sendChan to conn.
+func writePump(errSig *ErrorSignal, sendChan <-chan []byte, conn ConnWriter) {
 	for {
-		message, ok := <-send
-		if !ok {
-			// The hub closed the channel.
-			err := conn.WriteMessage(websocket.CloseMessage, []byte{})
-			if err != nil {
-				log.Println("writepump WriteMessage(CloseMessage) " + err.Error())
+		select {
+		case <-errSig.Done():
+			return
+		case message := <-sendChan:
+			if err := conn.WriteMessage(websocket.BinaryMessage, message); err != nil {
+				errSig.Close(err)
+				return
 			}
-			return
-		}
-		if err := conn.WriteMessage(websocket.BinaryMessage, message); err != nil {
-			log.Println("writepump WriteMessage(BinaryMessage) " + err.Error())
-			return
 		}
 	}
 }
