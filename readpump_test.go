@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"sync"
 	"testing"
 
@@ -47,5 +48,22 @@ func Test_readPump(t *testing.T) {
 
 // readPump should stop when the error signal is closed.
 func Test_readPump2(t *testing.T) {
-	// TODO
+	errSig := NewErrorSignal()
+	errSig.Close(errors.New("dummy error"))
+	conn := &internal.MockConn{MessagesIn: [][]byte{[]byte{}}}
+	hubChan := make(chan interface{})
+	// Dummy hub
+	go func() {
+		for {
+			_, ok := <-hubChan
+			if !ok {
+				return
+			}
+		}
+	}()
+
+	readPump(errSig, conn, hubChan)
+
+	// Stop dummy hub
+	close(hubChan)
 }

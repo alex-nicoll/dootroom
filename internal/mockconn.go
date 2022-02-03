@@ -16,14 +16,9 @@ type MockConn struct {
 	// Number of outgoing messages after which WriteMessage returns an error
 	MessagesOutLimit int
 	IsClosed         bool
-	OnReadMessage    func()
-	OnWriteMessage   func()
 }
 
 func (conn *MockConn) ReadMessage() (messageType int, p []byte, err error) {
-	if conn.OnReadMessage != nil {
-		conn.OnReadMessage()
-	}
 	time.Sleep(50 * time.Millisecond)
 	if len(conn.MessagesIn) == 0 {
 		return 0, nil, &MockCloseError{}
@@ -34,10 +29,10 @@ func (conn *MockConn) ReadMessage() (messageType int, p []byte, err error) {
 }
 
 func (conn *MockConn) WriteMessage(messageType int, data []byte) error {
-	if conn.OnWriteMessage != nil {
-		conn.OnWriteMessage()
-	}
 	time.Sleep(50 * time.Millisecond)
+	if conn.MessagesOut == nil {
+		conn.MessagesOut = [][]byte{}
+	}
 	if len(conn.MessagesOut) == conn.MessagesOutLimit {
 		return &MockCloseError{}
 	}

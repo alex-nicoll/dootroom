@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"testing"
 
 	"dootroom.com/main/internal"
@@ -43,5 +44,11 @@ func Test_writePump(t *testing.T) {
 
 // writePump should stop when the error signal is closed.
 func Test_writePump2(t *testing.T) {
-	// TODO
+	errSig := NewErrorSignal()
+	errSig.Close(errors.New("dummy error"))
+	sendChan := make(chan []byte, 1)
+	sendChan <- []byte{}
+	conn := &internal.MockConn{MessagesOutLimit: 2}
+
+	writePump(errSig, sendChan, conn)
 }
