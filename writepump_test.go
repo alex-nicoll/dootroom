@@ -33,10 +33,10 @@ func Test_writePump(t *testing.T) {
 	select {
 	case <-errSig.Done():
 		if _, ok := errSig.Err().(*internal.MockCloseError); !ok {
-			t.Errorf("readPump closed the error signal, but with the wrong error")
+			t.Errorf("writePump closed the error signal, but with the wrong error")
 		}
 	default:
-		t.Errorf("readPump didn't close the error signal")
+		t.Errorf("writePump didn't close the error signal")
 	}
 
 	return

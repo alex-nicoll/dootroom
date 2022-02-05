@@ -9,24 +9,24 @@ import (
 	"dootroom.com/main/internal"
 )
 
-// readPump should copy messages to hubChan in order.
+// readPump should copy messages to unmarshalChan in order.
 // readPump should close the error signal when the connection errors out.
 func Test_readPump(t *testing.T) {
 	errSig := NewErrorSignal()
 	messagesIn := [3][]byte{[]byte{0}, []byte{1}, []byte{2}}
 	conn := &internal.MockConn{MessagesIn: messagesIn[:]}
-	hubChan := make(chan interface{})
+	unmarshalChan := make(chan interface{})
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		readPump(errSig, conn, hubChan)
+		readPump(errSig, conn, unmarshalChan)
 	}()
 
-	messagesHubChan := [3]interface{}{<-hubChan, <-hubChan, <-hubChan}
+	msgsUnmarshalChan := [3]interface{}{<-unmarshalChan, <-unmarshalChan, <-unmarshalChan}
 	for i := 0; i <= 2; i++ {
-		message := messagesHubChan[i].(*Broadcast).message
+		message := msgsUnmarshalChan[i].(*Unmarshal).message
 		if bytes.Compare(messagesIn[i], message) != 0 {
 			t.Errorf("message: Expected %v, got %v", messagesIn[i], message)
 		}
@@ -51,19 +51,19 @@ func Test_readPump2(t *testing.T) {
 	errSig := NewErrorSignal()
 	errSig.Close(errors.New("dummy error"))
 	conn := &internal.MockConn{MessagesIn: [][]byte{[]byte{}}}
-	hubChan := make(chan interface{})
-	// Dummy hub
+	unmarshalChan := make(chan interface{})
+	// Dummy unmarshal
 	go func() {
 		for {
-			_, ok := <-hubChan
+			_, ok := <-unmarshalChan
 			if !ok {
 				return
 			}
 		}
 	}()
 
-	readPump(errSig, conn, hubChan)
+	readPump(errSig, conn, unmarshalChan)
 
-	// Stop dummy hub
-	close(hubChan)
+	// Stop dummy unmarshal
+	close(unmarshalChan)
 }

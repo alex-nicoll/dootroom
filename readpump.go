@@ -5,8 +5,8 @@ type ConnReader interface {
 	ReadMessage() (messageType int, p []byte, err error)
 }
 
-// readPump runs a loop that copies messages from conn to hubChan.
-func readPump(errSig *ErrorSignal, conn ConnReader, hubChan chan<- interface{}) {
+// readPump runs a loop that copies messages from conn to unmarshalChan.
+func readPump(errSig *ErrorSignal, conn ConnReader, unmarshalChan chan<- interface{}) {
 	for {
 		_, message, err := conn.ReadMessage()
 		select {
@@ -17,7 +17,7 @@ func readPump(errSig *ErrorSignal, conn ConnReader, hubChan chan<- interface{}) 
 				errSig.Close(err)
 				return
 			}
-			hubChan <- &Broadcast{message}
+			unmarshalChan <- &Unmarshal{errSig, message}
 		}
 	}
 }
