@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"log"
 	"time"
 )
 
@@ -11,11 +10,11 @@ const (
 	GridDimY = 100
 )
 
-var grid = [GridDimX][GridDimY]bool{}
+type Grid = [GridDimX][GridDimY]bool
+type Diff = map[int]map[int]bool
 
-var diff = make(map[int]map[int]bool)
-
-func flush() {
+// flush copies a Diff into a Grid and empties the Diff.
+func flush(diff Diff, grid *Grid) {
 	for x, ydiff := range diff {
 		for y, v := range ydiff {
 			grid[x][y] = v
@@ -24,7 +23,8 @@ func flush() {
 	}
 }
 
-func merge(newDiff map[int]map[int]bool) {
+// merge copies a new Diff into an existing Diff.
+func merge(newDiff Diff, diff Diff) {
 	for x, newYDiff := range newDiff {
 		ydiff, ok := diff[x]
 		if !ok {
@@ -37,7 +37,8 @@ func merge(newDiff map[int]map[int]bool) {
 	}
 }
 
-func neighbors(x int, y int) int {
+// neighbors returns the number of live cells in the neighborhood of cell (x,y).
+func neighbors(grid *Grid, x int, y int) int {
 	var n int
 	if x > 0 {
 		if y > 0 && grid[x-1][y-1] {
@@ -70,10 +71,12 @@ func neighbors(x int, y int) int {
 	return n
 }
 
-func nextState() {
+// nextState computes the changes between a Grid's current state and next
+// state, and writes the changes into a Diff.
+func nextState(grid *Grid, diff Diff) {
 	for x, ygrid := range grid {
 		for y := range ygrid {
-			n := neighbors(x, y)
+			n := neighbors(grid, x, y)
 			if grid[x][y] && n != 2 && n != 3 {
 				ydiff, ok := diff[x]
 				if !ok {
@@ -94,36 +97,35 @@ func nextState() {
 }
 
 type Merge struct {
-	diff map[int]map[int]bool
+	diff Diff
 }
 
-type Init struct {
+type InitListener struct {
 	li *Listener
 }
 
 type Tick struct{}
 
 func model(in chan interface{}, hubChan chan<- interface{}) {
+	grid, diff := &Grid{}, make(Diff)
+
+	// We could handle one Merge message and an arbitrary number of
+	// InitListener messages concurrently. But for simplicity of implementation
+	// we'll have one goroutine handle all three message types.
 	for {
-		m, ok := <-in
-		if !ok {
-			return
-		}
-		switch m := m.(type) {
+		switch m := (<-in).(type) {
 		case *Merge:
-			merge(m.diff)
-		case *Init:
-			// TODO: Merge and Init can run concurrently with each other, and Init with itself...
-			message, _ := json.Marshal(&grid)
+			merge(m.diff, diff)
+		case *InitListener:
+			message, _ := json.Marshal(grid)
 			hubChan <- &Forward{m.li, message}
 		case *Tick:
 			if len(diff) != 0 {
-				log.Println(diff)
 				message, _ := json.Marshal(diff)
 				hubChan <- &Broadcast{message}
-				flush()
+				flush(diff, grid)
 			}
-			nextState()
+			nextState(grid, diff)
 		}
 	}
 }

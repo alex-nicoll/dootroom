@@ -15,7 +15,7 @@ type Unmarshal struct {
 func unmarshal(in <-chan interface{}, modelChan chan<- interface{}) {
 	for {
 		m := (<-in).(*Unmarshal)
-		diff := make(map[int]map[int]bool)
+		diff := make(Diff)
 		err := json.Unmarshal(m.message, &diff)
 		if err != nil {
 			m.errSig.Close(err)
