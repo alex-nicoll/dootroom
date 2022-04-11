@@ -26,7 +26,17 @@ func main() {
 			log.Println(err)
 			return
 		}
-		handleConn(conn)
+		handleConn(
+			func() (messageType int, p []byte, err error) {
+				return conn.ReadMessage()
+			},
+			func(messageType int, data []byte) error {
+				return conn.WriteMessage(messageType, data)
+			},
+			func() error {
+				return conn.Close()
+			},
+		)
 	})
 	http.HandleFunc("/main.js", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "./main.js")

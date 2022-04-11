@@ -4,20 +4,15 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// ConnWriter decouples writePump from websocket.Conn for testing purposes.
-type ConnWriter interface {
-	WriteMessage(messageType int, data []byte) error
-}
-
-// writePump runs a loop that copies messages from sendChan to conn.
-func writePump(errSig *ErrorSignal, handleErr func(error), sendChan <-chan []byte, conn ConnWriter) {
+// writePump runs a loop that copies messages from sendChan to the connection.
+func writePump(errSig *ErrorSignal, handleErr func(error), sendChan <-chan []byte, write Write) {
 	for {
 		select {
 		case <-errSig.Done():
 			handleErr(errSig.Err())
 			return
 		case message := <-sendChan:
-			if err := conn.WriteMessage(websocket.BinaryMessage, message); err != nil {
+			if err := write(websocket.BinaryMessage, message); err != nil {
 				errSig.Close(err)
 				handleErr(errSig.Err())
 				return

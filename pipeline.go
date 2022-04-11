@@ -8,20 +8,13 @@ import (
 
 const SendBufferLen = 256
 
-// Conn decouples startPipeline from websocket.Conn for testing purposes.
-type Conn interface {
-	ReadMessage() (messageType int, p []byte, err error)
-	WriteMessage(messageType int, data []byte) error
-	Close() error
-}
-
 // startPipeline runs unmarshal, model, and hub in separate goroutines and
 // connects them in order via channels to form a pipeline. It also runs clock
 // in a goroutine and connects it to model.
 //
 // It returns a function that connects a WebSocket connection to the pipeline.
 // The returned function runs readPump and writePump in new goroutines.
-func startPipeline() func(Conn) *ErrorSignal {
+func startPipeline() func(Read, Write, Close) *ErrorSignal {
 	modelChan := make(chan interface{})
 	handleConn := startPipelineInternal(modelChan, modelChan)
 	go clock(modelChan)
@@ -31,7 +24,7 @@ func startPipeline() func(Conn) *ErrorSignal {
 // Internal implementation of startPipeline exposed for testing purposes. This
 // allows an additional stage to be added between unmarshal and model, and
 // omits clock so that tests can control model via Tick messages.
-func startPipelineInternal(unmarshalOut chan interface{}, modelChan chan interface{}) func(Conn) *ErrorSignal {
+func startPipelineInternal(unmarshalOut chan interface{}, modelChan chan interface{}) func(Read, Write, Close) *ErrorSignal {
 	unmarshalChan := make(chan interface{})
 	hubChan := make(chan interface{})
 
@@ -39,7 +32,7 @@ func startPipelineInternal(unmarshalOut chan interface{}, modelChan chan interfa
 	go model(modelChan, hubChan)
 	go hub(hubChan)
 
-	return func(conn Conn) (errSig *ErrorSignal) {
+	return func(re Read, wr Write, cl Close) (errSig *ErrorSignal) {
 		// TODO: Handle control messages. See Gorilla WebSocket documentation.
 
 		// ErrorSignal for this connection
@@ -66,18 +59,18 @@ func startPipelineInternal(unmarshalOut chan interface{}, modelChan chan interfa
 				// to send a close message. If this *was* a close error, then Gorilla
 				// Websocket's default close handler should have already sent a close
 				// message.
-				err := conn.WriteMessage(websocket.CloseMessage, []byte{})
+				err := wr(websocket.CloseMessage, []byte{})
 				if err != nil {
 					log.Println(err)
 				}
 			}
 			// Closing the connection should cause readPump to stop if it is
 			// currently blocked waiting to read a message from the connection.
-			conn.Close()
+			cl()
 		}
 
-		go writePump(errSig, handleErr, sendChan, conn)
-		go readPump(errSig, conn, unmarshalChan)
+		go writePump(errSig, handleErr, sendChan, wr)
+		go readPump(errSig, re, unmarshalChan)
 		return
 	}
 }
