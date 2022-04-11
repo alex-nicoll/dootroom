@@ -3,9 +3,22 @@ package main
 import (
 	"errors"
 	"testing"
-
-	"dootroom.com/main/internal"
 )
+
+type mockConnWriter struct {
+	out      chan []byte
+	outCount int
+	outLimit int
+}
+
+func (conn *mockConnWriter) WriteMessage(messageType int, data []byte) error {
+	if conn.outCount == conn.outLimit {
+		return errors.New("Client closed the connection.")
+	}
+	conn.outCount++
+	conn.out <- data
+	return nil
+}
 
 // writePump should close the error signal when the connection throws an error.
 func Test_writePump(t *testing.T) {
@@ -13,20 +26,15 @@ func Test_writePump(t *testing.T) {
 	sendChan := make(chan []byte, 2)
 	sendChan <- []byte{}
 	sendChan <- []byte{}
-	conn := &internal.MockConn{Out: make(chan []byte, 1), OutLimit: 1}
+	conn := &mockConnWriter{out: make(chan []byte, 1), outLimit: 1}
 
 	writePump(errSig, sendChan, conn)
 
 	select {
 	case <-errSig.Done():
-		if _, ok := errSig.Err().(*internal.MockCloseError); !ok {
-			t.Errorf("writePump closed the error signal, but with the wrong error")
-		}
 	default:
 		t.Errorf("writePump didn't close the error signal")
 	}
-
-	return
 }
 
 // writePump should stop when the error signal is closed.

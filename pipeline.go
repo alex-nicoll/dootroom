@@ -7,6 +7,8 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+const SendBufferLen = 256
+
 // Conn decouples startPipeline from websocket.Conn for testing purposes.
 type Conn interface {
 	ReadMessage() (messageType int, p []byte, err error)
@@ -21,7 +23,7 @@ type Conn interface {
 // It returns a function that connects a WebSocket connection to the pipeline.
 // The returned function runs readPump and writePump in new goroutines, and
 // handles errors related to the connection in a third goroutine.
-func startPipeline() func(Conn) {
+func startPipeline() func(Conn) *ErrorSignal {
 	modelChan := make(chan interface{})
 	handleConn := startPipelineInternal(modelChan, modelChan)
 	go clock(modelChan)
@@ -31,7 +33,7 @@ func startPipeline() func(Conn) {
 // Internal implementation of startPipeline exposed for testing purposes. This
 // allows an additional stage to be added between unmarshal and model, and
 // omits clock so that tests can control model via Tick messages.
-func startPipelineInternal(unmarshalOut chan interface{}, modelChan chan interface{}) func(Conn) {
+func startPipelineInternal(unmarshalOut chan interface{}, modelChan chan interface{}) func(Conn) *ErrorSignal {
 	unmarshalChan := make(chan interface{})
 	hubChan := make(chan interface{})
 
@@ -39,14 +41,15 @@ func startPipelineInternal(unmarshalOut chan interface{}, modelChan chan interfa
 	go model(modelChan, hubChan)
 	go hub(hubChan)
 
-	return func(conn Conn) {
+	return func(conn Conn) (errSig *ErrorSignal) {
+		// ErrorSignal for this connection
+		errSig = NewErrorSignal()
 		go func() {
 			// TODO: Handle control messages. See Gorilla WebSocket documentation.
+			// TODO: Once this is tested, see if refactoring to pass error handling as a function to writePump makes things simpler
 
-			// ErrorSignal for this connection
-			errSig := NewErrorSignal()
 			// Channel of messages to send on this connection
-			sendChan := make(chan []byte, 256)
+			sendChan := make(chan []byte, SendBufferLen)
 
 			// Register this connection's send channel and ErrorSignal with the hub.
 			listener := &Listener{sendChan, errSig}
@@ -90,7 +93,10 @@ func startPipelineInternal(unmarshalOut chan interface{}, modelChan chan interfa
 				}
 			}
 
+			// Closing the connection should cause readPump to stop if it is
+			// currently blocked waiting to read a message from the connection.
 			conn.Close()
 		}()
+		return
 	}
 }

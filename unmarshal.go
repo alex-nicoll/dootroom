@@ -16,20 +16,34 @@ func unmarshal(in <-chan interface{}, modelChan chan<- interface{}) {
 	for {
 		m := (<-in).(*Unmarshal)
 		diff := make(Diff)
-		err := json.Unmarshal(m.message, &diff)
-		if err != nil {
+		if err := json.Unmarshal(m.message, &diff); err != nil {
 			m.errSig.Close(err)
+			continue
 		}
-		for x := range diff {
-			if x >= GridDimX {
-				m.errSig.Close(errors.New("Unmarshalled diff exceeds grid's X dimension."))
-			}
-			for y := range diff[x] {
-				if y >= GridDimY {
-					m.errSig.Close(errors.New("Unmarshalled diff exceeds grid's Y dimension."))
-				}
-			}
+		if err := validateDiff(diff); err != nil {
+			m.errSig.Close(err)
+			continue
 		}
 		modelChan <- &Merge{diff}
 	}
+}
+
+func validateDiff(diff Diff) error {
+	if len(diff) == 0 {
+		return errors.New("Unmarshalled diff is empty.")
+	}
+	for x := range diff {
+		if x >= GridDimX {
+			return errors.New("Unmarshalled diff exceeds grid's X dimension.")
+		}
+		if len(diff[x]) == 0 {
+			return errors.New("Unmarshalled diff includes an X coordinate with no Y coordinate.")
+		}
+		for y := range diff[x] {
+			if y >= GridDimY {
+				return errors.New("Unmarshalled diff exceeds grid's Y dimension.")
+			}
+		}
+	}
+	return nil
 }
