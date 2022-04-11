@@ -10,14 +10,16 @@ type ConnWriter interface {
 }
 
 // writePump runs a loop that copies messages from sendChan to conn.
-func writePump(errSig *ErrorSignal, sendChan <-chan []byte, conn ConnWriter) {
+func writePump(errSig *ErrorSignal, handleErr func(error), sendChan <-chan []byte, conn ConnWriter) {
 	for {
 		select {
 		case <-errSig.Done():
+			handleErr(errSig.Err())
 			return
 		case message := <-sendChan:
 			if err := conn.WriteMessage(websocket.BinaryMessage, message); err != nil {
 				errSig.Close(err)
+				handleErr(errSig.Err())
 				return
 			}
 		}

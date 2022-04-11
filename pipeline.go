@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"sync"
 
 	"github.com/gorilla/websocket"
 )
@@ -21,8 +20,7 @@ type Conn interface {
 // in a goroutine and connects it to model.
 //
 // It returns a function that connects a WebSocket connection to the pipeline.
-// The returned function runs readPump and writePump in new goroutines, and
-// handles errors related to the connection in a third goroutine.
+// The returned function runs readPump and writePump in new goroutines.
 func startPipeline() func(Conn) *ErrorSignal {
 	modelChan := make(chan interface{})
 	handleConn := startPipelineInternal(modelChan, modelChan)
@@ -42,46 +40,27 @@ func startPipelineInternal(unmarshalOut chan interface{}, modelChan chan interfa
 	go hub(hubChan)
 
 	return func(conn Conn) (errSig *ErrorSignal) {
+		// TODO: Handle control messages. See Gorilla WebSocket documentation.
+
 		// ErrorSignal for this connection
 		errSig = NewErrorSignal()
-		go func() {
-			// TODO: Handle control messages. See Gorilla WebSocket documentation.
-			// TODO: Once this is tested, see if refactoring to pass error handling as a function to writePump makes things simpler
+		// Channel of messages to send on this connection
+		sendChan := make(chan []byte, SendBufferLen)
 
-			// Channel of messages to send on this connection
-			sendChan := make(chan []byte, SendBufferLen)
+		// Register this connection's send channel and ErrorSignal with the hub.
+		listener := &Listener{sendChan, errSig}
+		hubChan <- &Register{listener}
 
-			// Register this connection's send channel and ErrorSignal with the hub.
-			listener := &Listener{sendChan, errSig}
-			hubChan <- &Register{listener}
+		// Tell the model to send down initialization data.
+		modelChan <- &InitListener{listener}
 
-			// Tell the model to send down initialization data.
-			modelChan <- &InitListener{listener}
-
-			// Start a goroutine to copy messages from the send channel to the
-			// connection.
-			var wg sync.WaitGroup
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				writePump(errSig, sendChan, conn)
-			}()
-			// Start a goroutine to copy messages from the connection to the unmarshal
-			// channel.
-			go readPump(errSig, conn, unmarshalChan)
-
-			// Wait for an error.
-			<-errSig.Done()
-			err := errSig.Err()
+		handleErr := func(err error) {
 			log.Println(err)
-
 			if _, ok := err.(*BufferOverflowError); !ok {
 				// If this was not a buffer overflow detected by the hub, then we need
 				// to explicitly unregister.
 				hubChan <- &Unregister{listener}
 			}
-
-			wg.Wait()
 			if !websocket.IsUnexpectedCloseError(err) {
 				// The error is not due to the client closing the connection. Attempt
 				// to send a close message. If this *was* a close error, then Gorilla
@@ -92,11 +71,13 @@ func startPipelineInternal(unmarshalOut chan interface{}, modelChan chan interfa
 					log.Println(err)
 				}
 			}
-
 			// Closing the connection should cause readPump to stop if it is
 			// currently blocked waiting to read a message from the connection.
 			conn.Close()
-		}()
+		}
+
+		go writePump(errSig, handleErr, sendChan, conn)
+		go readPump(errSig, conn, unmarshalChan)
 		return
 	}
 }

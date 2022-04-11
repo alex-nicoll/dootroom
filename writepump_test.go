@@ -28,7 +28,7 @@ func Test_writePump(t *testing.T) {
 	sendChan <- []byte{}
 	conn := &mockConnWriter{out: make(chan []byte, 1), outLimit: 1}
 
-	writePump(errSig, sendChan, conn)
+	writePump(errSig, func(err error) {}, sendChan, conn)
 
 	select {
 	case <-errSig.Done():
@@ -43,5 +43,5 @@ func Test_writePump2(t *testing.T) {
 	errSig.Close(errors.New("dummy error"))
 	sendChan := make(chan []byte)
 
-	writePump(errSig, sendChan, nil)
+	writePump(errSig, func(err error) {}, sendChan, nil)
 }
