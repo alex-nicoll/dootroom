@@ -1,4 +1,4 @@
-module dootroom.com/main
+module mgol.com/main
 
 go 1.15
 
