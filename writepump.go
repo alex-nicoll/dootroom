@@ -13,8 +13,7 @@ func writePump(errSig *ErrorSignal, handleErr func(error), sendChan <-chan []byt
 			return
 		case message := <-sendChan:
 			if err := write(websocket.BinaryMessage, message); err != nil {
-				errSig.Close(err)
-				handleErr(errSig.Err())
+				handleErr(err)
 				return
 			}
 		}

@@ -4,15 +4,10 @@ package main
 func readPump(errSig *ErrorSignal, read Read, unmarshalChan chan<- interface{}) {
 	for {
 		_, message, err := read()
-		select {
-		case <-errSig.Done():
+		if err != nil {
+			errSig.Close(err)
 			return
-		default:
-			if err != nil {
-				errSig.Close(err)
-				return
-			}
-			unmarshalChan <- &Unmarshal{errSig, message}
 		}
+		unmarshalChan <- &Unmarshal{errSig, message}
 	}
 }
