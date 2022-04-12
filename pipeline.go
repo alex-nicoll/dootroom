@@ -33,8 +33,6 @@ func startPipelineInternal(unmarshalOut chan interface{}, modelChan chan interfa
 	go hub(hubChan)
 
 	return func(re Read, wr Write, cl Close) (errSig *ErrorSignal) {
-		// TODO: Handle control messages. See Gorilla WebSocket documentation.
-
 		// ErrorSignal for this connection
 		errSig = NewErrorSignal()
 		// Channel of messages to send on this connection

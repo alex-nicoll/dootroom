@@ -1,0 +1,6 @@
+- Test that error handling does not leak goroutines
+- Do the tests leak goroutines?
+- For tests in which blocking forever indicates failure, add timeouts to help with debugging
+- Pick an appropriate port number.
+- Pick appropriate WebSocket buffer sizes to pass to Upgrader. See Gorilla WebSocket documentation.
+- Look into using Gorilla WebSocket readJSON and writeJSON methods

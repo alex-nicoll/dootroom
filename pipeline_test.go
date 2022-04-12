@@ -308,7 +308,3 @@ func verifyCloseMsgSentAndConnClosed(t *testing.T, out chan int, closed chan str
 	}
 	<-closed
 }
-
-// TODO: test that error handling does not leak goroutines
-// TODO: do these tests leak goroutines?
-// TODO: add timeouts to help with debugging

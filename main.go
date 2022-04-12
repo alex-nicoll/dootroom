@@ -7,7 +7,6 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// TODO: Pick an appropriate buffer size. See Gorilla WebSocket documentation.
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
@@ -42,5 +41,4 @@ func main() {
 		http.ServeFile(w, r, "./main.js")
 	})
 	log.Fatal(http.ListenAndServe(":8080", nil))
-	// TODO: Pick an appropriate port number.
 }
