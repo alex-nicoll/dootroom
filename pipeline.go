@@ -8,9 +8,9 @@ import (
 
 const SendBufferLen = 256
 
-// startPipeline runs unmarshal, model, and hub in separate goroutines and
-// connects them in order via channels to form a pipeline. It also runs clock
-// in a goroutine and connects it to model.
+// startPipeline runs model and hub in separate goroutines and connects them in
+// order via channels to form a pipeline. It also runs clock in a goroutine and
+// connects it to model.
 //
 // It returns a function that connects a WebSocket connection to the pipeline.
 // The returned function runs readPump and writePump in new goroutines.
@@ -22,13 +22,11 @@ func startPipeline() func(Read, Write, Close) *ErrorSignal {
 }
 
 // Internal implementation of startPipeline exposed for testing purposes. This
-// allows an additional stage to be added between unmarshal and model, and
+// allows an additional stage to be added between readPump and model, and
 // omits clock so that tests can control model via Tick messages.
-func startPipelineInternal(unmarshalOut chan interface{}, modelChan chan interface{}) func(Read, Write, Close) *ErrorSignal {
-	unmarshalChan := make(chan interface{})
+func startPipelineInternal(readPumpOut chan interface{}, modelChan chan interface{}) func(Read, Write, Close) *ErrorSignal {
 	hubChan := make(chan interface{})
 
-	go unmarshal(unmarshalChan, unmarshalOut)
 	go model(modelChan, hubChan)
 	go hub(hubChan)
 
@@ -62,13 +60,12 @@ func startPipelineInternal(unmarshalOut chan interface{}, modelChan chan interfa
 					log.Println(err)
 				}
 			}
-			// Closing the connection should cause readPump to stop if it is
-			// currently blocked waiting to read a message from the connection.
+			// Closing the connection should cause readPump to stop.
 			cl()
 		}
 
 		go writePump(errSig, handleErr, sendChan, wr)
-		go readPump(errSig, re, unmarshalChan)
+		go readPump(errSig, re, readPumpOut)
 		return
 	}
 }

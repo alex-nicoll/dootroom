@@ -10,9 +10,9 @@ import (
 )
 
 func Test_pipeline(t *testing.T) {
-	unmarshalOut := make(chan interface{})
+	readPumpOut := make(chan interface{})
 	modelChan := make(chan interface{})
-	handleConn := startPipelineInternal(unmarshalOut, modelChan)
+	handleConn := startPipelineInternal(readPumpOut, modelChan)
 	newConn := func() (in chan []byte, out chan []byte, re Read, wr Write, cl Close) {
 		in = make(chan []byte)
 		out = make(chan []byte)
@@ -58,8 +58,8 @@ func Test_pipeline(t *testing.T) {
 
 	in1 <- []byte(diff1)
 	in2 <- []byte(diff2)
-	modelChan <- <-unmarshalOut
-	modelChan <- <-unmarshalOut
+	modelChan <- <-readPumpOut
+	modelChan <- <-readPumpOut
 	modelChan <- &Tick{}
 
 	json = string(<-out1)
@@ -211,9 +211,9 @@ func Test_errorWritingMessage(t *testing.T) {
 // When the send buffer overflows, a close message should be sent on the
 // connection and then the connection should be closed.
 func Test_sendBufferOverflow(t *testing.T) {
-	unmarshalOut := make(chan interface{})
+	readPumpOut := make(chan interface{})
 	modelChan := make(chan interface{})
-	handleConn := startPipelineInternal(unmarshalOut, modelChan)
+	handleConn := startPipelineInternal(readPumpOut, modelChan)
 	in := make(chan []byte)
 	out := make(chan int)
 	closed := make(chan struct{})
@@ -226,7 +226,7 @@ func Test_sendBufferOverflow(t *testing.T) {
 	// This automaton runs forever, alternating between two states. This allows
 	// us to produce an arbitrary number of outgoing messages.
 	in <- []byte("{\"20\":{\"20\":true,\"21\":true,\"22\":true}}")
-	modelChan <- <-unmarshalOut
+	modelChan <- <-readPumpOut
 	// Produce SendBufferLen+1 Ticks in order to overflow the send buffer.
 	// writePump should currently be blocked trying to write the GoL state
 	// initialization message to the connection, so no messages should be

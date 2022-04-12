@@ -4,7 +4,8 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// writePump runs a loop that copies messages from sendChan to the connection.
+// writePump runs a loop that copies a message from sendChan to the connection.
+// It also listens for connection-specific errors and executes error handling.
 func writePump(errSig *ErrorSignal, handleErr func(error), sendChan <-chan []byte, write Write) {
 	for {
 		select {
