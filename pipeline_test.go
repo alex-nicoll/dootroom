@@ -191,11 +191,7 @@ func Test_errorWritingMessage(t *testing.T) {
 	attachConn := startPipeline()
 	closed := make(chan struct{})
 	attachConn(
-		func() (messageType int, p []byte, err error) {
-			<-closed
-			err = errors.New("Server closed the connection.")
-			return
-		},
+		newReadUntilClosedFn(closed),
 		func(messageType int, data []byte) error {
 			return errors.New("dummy error")
 		},
@@ -217,7 +213,7 @@ func Test_sendBufferOverflow(t *testing.T) {
 	in := make(chan []byte)
 	out := make(chan int)
 	closed := make(chan struct{})
-	errSig := attachConn(
+	_, errSig := attachConn(
 		newReadPayloadFn(in, closed),
 		newWriteMessageTypeFn(out),
 		newCloseFn(closed),
@@ -246,6 +242,25 @@ func Test_sendBufferOverflow(t *testing.T) {
 		}
 	}
 	<-closed
+}
+
+// When an error occurs related to a connection and resources are cleaned up,
+// no goroutines should be leaked.
+func test_leak(t *testing.T) {
+	attachConn := startPipeline()
+	closed := make(chan struct{})
+	wg, errSig := attachConn(
+		newReadUntilClosedFn(closed),
+		func(messageType int, data []byte) error {
+			// block forever
+			select {}
+		},
+		newCloseFn(closed),
+	)
+
+	errSig.Close(errors.New("dummy error"))
+
+	wg.Wait()
 }
 
 // invalidMessageTestTemplate starts a pipeline with one connection, simulates
@@ -283,6 +298,14 @@ func newReadPayloadFn(in chan []byte, closed chan struct{}) Read {
 func newReadErrorFn(in chan error, closed chan struct{}) Read {
 	return func() (messageType int, p []byte, err error) {
 		err = <-in
+		return
+	}
+}
+
+func newReadUntilClosedFn(closed chan struct{}) Read {
+	return func() (messageType int, p []byte, err error) {
+		<-closed
+		err = errors.New("Server closed the connection.")
 		return
 	}
 }
