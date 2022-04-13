@@ -1,10 +1,5 @@
 package main
 
-import (
-	"encoding/json"
-	"time"
-)
-
 const (
 	GridDimX = 100
 	GridDimY = 100
@@ -93,46 +88,5 @@ func nextState(grid *Grid, diff Diff) {
 				ydiff[y] = true
 			}
 		}
-	}
-}
-
-type Merge struct {
-	diff Diff
-}
-
-type InitListener struct {
-	li *Listener
-}
-
-type Tick struct{}
-
-func model(in chan interface{}, hubChan chan<- interface{}) {
-	grid, diff := &Grid{}, make(Diff)
-
-	// We could handle one Merge message and an arbitrary number of
-	// InitListener messages concurrently. But for simplicity of implementation
-	// we'll have one goroutine handle all three message types.
-	for {
-		switch m := (<-in).(type) {
-		case *Merge:
-			merge(m.diff, diff)
-		case *InitListener:
-			message, _ := json.Marshal(grid)
-			hubChan <- &Forward{m.li, message}
-		case *Tick:
-			if len(diff) != 0 {
-				message, _ := json.Marshal(diff)
-				hubChan <- &Broadcast{message}
-				flush(diff, grid)
-			}
-			nextState(grid, diff)
-		}
-	}
-}
-
-func clock(modelChan chan<- interface{}) {
-	for {
-		time.Sleep(150 * time.Millisecond)
-		modelChan <- &Tick{}
 	}
 }

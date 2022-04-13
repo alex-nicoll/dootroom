@@ -13,7 +13,7 @@ var upgrader = websocket.Upgrader{
 }
 
 func main() {
-	handleConn := startPipeline()
+	attachConn := startPipeline()
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if !websocket.IsWebSocketUpgrade(r) {
 			http.ServeFile(w, r, "./main.html")
@@ -25,7 +25,7 @@ func main() {
 			log.Println(err)
 			return
 		}
-		handleConn(
+		attachConn(
 			func() (messageType int, p []byte, err error) {
 				return conn.ReadMessage()
 			},
