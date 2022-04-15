@@ -40,5 +40,8 @@ func main() {
 	http.HandleFunc("/main.js", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "./main.js")
 	})
+	http.HandleFunc("/main.css", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "./main.css")
+	})
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

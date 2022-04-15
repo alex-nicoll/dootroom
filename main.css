@@ -1,0 +1,16 @@
+#grid {
+  display: grid;
+  grid-auto-rows: 12px;
+  grid-auto-columns: 12px;
+}
+
+.cell_empty {
+  background-color: silver;
+  border: 1px solid lightgray;
+}
+
+.cell_filled {
+  background-color: gray;
+  border: 1px solid lightgray;
+}
+

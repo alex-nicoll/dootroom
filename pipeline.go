@@ -111,7 +111,7 @@ func readPump(errSig *ErrorSignal, read Read, golChan chan<- interface{}) {
 
 func clock(golChan chan<- interface{}) {
 	for {
-		time.Sleep(150 * time.Millisecond)
+		time.Sleep(170 * time.Millisecond)
 		golChan <- &Tick{}
 	}
 }
