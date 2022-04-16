@@ -1,4 +1,10 @@
+- Handle server sending updates faster than UI can render them.
+  - Have client ask for another init when too many diffs are buffered.
+  - Profile and speed up rendering.
+- Reduce overloading of the term "grid". Currently refers to CSS module, HTML element, and backend data structure.
+- Try using SVG or canvas instead of HTML div's for grid
 - Simplify model. Server only needs to send the cells that changed state, not the new state. Likewise for the client, unless we implement erasing.
+- On init, server can send just the live cells, rather than the whole grid, so long as the client can distinguish between an init and a diff.
 - Write test for client side code (input: ws; output: document)
 - Generate server and client code so that the grid dimensions are defined in one place
 - Do the tests leak goroutines?
@@ -14,9 +20,12 @@
 
 Features:
 
-- Draw on teal overlay, submit
+- Drag to draw/erase
 - Stamps
+- Competing species (colors)
+- Submit button for mobile
 - Auto reset, followed by free draw period
+- See what other players are drawing
 - Stamp builder
 - Langton's Ant
 - Gamepad support

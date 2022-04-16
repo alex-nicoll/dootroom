@@ -1,16 +1,31 @@
 #grid {
+  position: absolute;
+  z-index: 0;
   display: grid;
   grid-auto-rows: 12px;
   grid-auto-columns: 12px;
 }
 
-.cell_empty {
+.grid_cell_empty {
   background-color: silver;
   border: 1px solid lightgray;
 }
 
-.cell_filled {
+.grid_cell_filled {
   background-color: gray;
   border: 1px solid lightgray;
 }
 
+#overlay {
+  position: absolute;
+  z-index: 1;
+  display: grid;
+  grid-auto-rows: 12px;
+  grid-auto-columns: 12px;
+  opacity: 0.4;
+}
+
+.overlay_cell_filled {
+  background-color: teal;
+  border: 1px solid lightgray;
+}
