@@ -16,7 +16,7 @@
 - Cloud infrastructure
 - CI/CD pipeline
 - Browser testing with Selenium (or BrowserStack/LambdaTest to hit macOS)
-- Design doc
+- Design doc. This would be a good place to explain that gol+hub+writePump maintains the order of InitListener and Tick messages, so that the client stays in sync with the server.
 
 Features:
 
