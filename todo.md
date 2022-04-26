@@ -1,3 +1,4 @@
+- Max clients
 - Handle server sending updates faster than UI can render them.
   - Have client ask for another init when too many diffs are buffered.
   - Profile and speed up rendering.
@@ -22,7 +23,6 @@ Features:
 
 - Stamps
 - Competing species (colors)
-- Submit button for mobile
 - Auto reset, followed by free draw period
 - See what other players are drawing
 - Stamp builder

@@ -1,6 +1,13 @@
+#instructions {
+  margin: 8px;
+}
+
+/* Give board a position value so that overlay is positioned relative to it. */
+#board {
+  position: relative;
+}
+
 #grid {
-  position: absolute;
-  z-index: 0;
   display: grid;
   grid-auto-rows: 12px;
   grid-auto-columns: 12px;
@@ -17,8 +24,10 @@
 }
 
 #overlay {
-  position: absolute;
   z-index: 1;
+  position: absolute;
+  top: 0;
+
   display: grid;
   grid-auto-rows: 12px;
   grid-auto-columns: 12px;
@@ -28,4 +37,25 @@
 .overlay_cell_filled {
   background-color: teal;
   border: 1px solid lightgray;
+}
+
+#submit {
+  z-index: 2;
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  height: 4rem;
+  width: 100vw;
+  text-align: center;
+  background-color: white;
+  opacity: 0.6;
+}
+
+body {
+  /* Remove the margin so that the submit button is always flush with the
+   * viewport. */
+  margin: 0;
+  /* The below is needed in order to get the submit button to stick to the left
+   * side of the viewport. */
+  display: inline-block;
 }

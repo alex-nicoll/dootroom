@@ -9,39 +9,94 @@ grid.appendChild(makeCells((cell, x, y) => {
   cell.className = "grid_cell_empty";
 }));
 
-// Set of overlay cells (div elements) that have been drawn (filled in by clicking or dragging over).
-const drawnOverlayCells = new Set();
-
-// drawState is either "drawing", "erasing", or undefined.
-let drawState;
-
-// Create the overlay. Handle pointer events to allow drawing and erasing cells.
+// Create the overlay. 
 const overlay = document.getElementById("overlay");
 overlay.appendChild(makeCells((cell, x, y) => {
   cell.id = `${x},${y}-overlay`
-  cell.addEventListener("pointerdown", (e) => {
-    const cell = e.target;
-    if (cell.className === "overlay_cell_filled") {
-      erase(cell);
-      drawState = "erasing";
-    } else {
-      draw(cell);
-      drawState = "drawing";
-    }
-  });
-  cell.addEventListener("pointerenter", (e) => {
-    const cell = e.target;
-    if (drawState === "drawing" && cell.className === "") {
-      draw(cell);
-    } else if (drawState === "erasing" && cell.className === "overlay_cell_filled") {
-      erase(cell);
-    }
-  });
 }));
-document.addEventListener("pointerup", (e) => drawState = undefined);
 
-// Disable dragging of overlay elements.
-overlay.addEventListener("dragstart", (e) => e.preventDefault());
+// Prevent dragging of overlay elements.
+overlay.addEventListener("dragstart", (e) => {
+  e.preventDefault();
+});
+
+// Set of overlay cells (div elements) that have been filled.
+const filledOverlayCells = new Set();
+
+// Allow drawing and erasing with a mouse.
+// mouseDrawState is either "drawing", "erasing", or undefined.
+let mouseDrawState;
+overlay.addEventListener("mousedown", (e) => {
+  const cell = e.target;
+  if (cell.className === "overlay_cell_filled") {
+    empty(cell);
+    mouseDrawState = "erasing";
+  } else {
+    fill(cell);
+    mouseDrawState = "drawing";
+  }
+});
+overlay.addEventListener("mouseover", (e) => {
+  drawOrErase(mouseDrawState, e.target);
+});
+document.addEventListener("mouseup", (e) => {
+  mouseDrawState = undefined;
+});
+
+// Allow drawing and erasing with a single touch. User can tap on cells to
+// change them, or move one finger across the screen to draw/erase. Tapping
+// with two fingers does nothing. Moving two fingers across the screen should
+// invoke the browser's default behavior - scrolling, hopefully.
+// touchDrawState is either "drawing", "erasing", or undefined.
+let touchDrawState;
+let isTapping = false;
+overlay.addEventListener("touchstart", (e) => {
+  if (e.touches.length !== 1) {
+    // Stop registering a tap as soon as a second touch is detected.
+    isTapping = false;
+    return;
+  }
+  isTapping = true;
+  if (e.target.className === "overlay_cell_filled") {
+    touchDrawState = "erasing";
+  } else {
+    touchDrawState = "drawing";
+  }
+});
+overlay.addEventListener("touchmove", (e) => {
+  if (e.touches.length !== 1) {
+    return;
+  }
+  isTapping = false;
+  if (e.cancelable) {
+    // Prevent scrolling.
+    e.preventDefault();
+  }
+  const touch = e.touches.item(0);
+  const el = document.elementFromPoint(touch.clientX, touch.clientY);
+  if (!el) {
+    // Touch moved outside of the viewport.
+    return;
+  }
+  if (!el.id.endsWith("-overlay")) {
+    // Touch moved outside of the overlay.
+    return;
+  }
+  drawOrErase(touchDrawState, el);
+});
+document.addEventListener("touchend", (e) => {
+  if (isTapping) {
+    drawOrErase(touchDrawState, e.target);
+    isTapping = false;
+    // Prevent further events from firing (including mousedown and mouseup).
+    e.preventDefault();
+  }
+  touchDrawState = undefined;
+});
+document.addEventListener("touchcancel", (e) => {
+  isTapping = false;
+  touchDrawState = undefined;
+});
 
 // Connect to the WebSocket server.
 const ws = new WebSocket(`ws:\/\/${document.location.host}`);
@@ -59,25 +114,15 @@ ws.onmessage = (msg) => {
   });
 }
 
-// Allow the grid changes represented by the drawn overlay cells to be
-// submitted to the server via the Enter key.
+// Allow submitting via the Enter key.
 document.addEventListener("keydown", (e) => {
-  if (e.code === "Enter" && drawnOverlayCells.size !== 0) {
-    const diff = {};
-    for (const cell of drawnOverlayCells) {
-      const x_ysuffix = cell.id.split(",");
-      const x = x_ysuffix[0];
-      const y = x_ysuffix[1].split("-overlay")[0];
-      if (diff[x] === undefined) {
-        diff[x] = {};
-      }
-      diff[x][y] = true;
-
-      erase(cell);
-    }
-    ws.send(JSON.stringify(diff));
+  if (e.code === "Enter") {
+    submit();
   }
 });
+
+// Allow submitting via submit button.
+document.getElementById("submit").addEventListener("click", submit);
 
 function makeCells(callback) {
   const frag = document.createDocumentFragment();
@@ -93,12 +138,40 @@ function makeCells(callback) {
   return frag;
 }
 
-function draw(cell) {
+function fill(cell) {
   cell.className = "overlay_cell_filled";
-  drawnOverlayCells.add(cell);
+  filledOverlayCells.add(cell);
 }
 
-function erase(cell) {
+function empty(cell) {
   cell.className = "";
-  drawnOverlayCells.delete(cell);
+  filledOverlayCells.delete(cell);
+}
+
+function drawOrErase(drawState, cell) {
+  if (drawState === "drawing" && cell.className === "") {
+    fill(cell);
+  } else if (drawState === "erasing" && cell.className === "overlay_cell_filled") {
+    empty(cell);
+  }
+}
+
+// submit sends the grid changes represented by the filled overlay cells to the server.
+function submit() {
+  if (filledOverlayCells.size === 0) {
+    return;
+  }
+  const diff = {};
+  for (const cell of filledOverlayCells) {
+    const x_ysuffix = cell.id.split(",");
+    const x = x_ysuffix[0];
+    const y = x_ysuffix[1].split("-overlay")[0];
+    if (diff[x] === undefined) {
+      diff[x] = {};
+    }
+    diff[x][y] = true;
+
+    empty(cell);
+  }
+  ws.send(JSON.stringify(diff));
 }
