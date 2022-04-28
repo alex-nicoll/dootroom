@@ -27,7 +27,6 @@
   z-index: 1;
   position: absolute;
   top: 0;
-
   display: grid;
   grid-auto-rows: 12px;
   grid-auto-columns: 12px;
@@ -47,8 +46,10 @@
   height: 4rem;
   width: 100vw;
   text-align: center;
-  background-color: white;
-  opacity: 0.6;
+  font-size: 1.5rem;
+  color: dodgerblue;
+  background-color: rgba(235, 250, 250, 0.7);
+  border: 4px solid rgba(173, 216, 230, 0.7);
 }
 
 body {
