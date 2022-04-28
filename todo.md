@@ -1,3 +1,8 @@
+- Fix bug where tapping with one finger inside grid and one finger outside causes the outside to be filled
+- When page becomes visible, reconnect websocket if it is currently disconnected
+- Create run.sh: go test && go run . $1, and have main.go get port from command line args
+- Add install instructions to README
+- Link to github and game of life wiki
 - Max clients
 - Handle server sending updates faster than UI can render them.
   - Have client ask for another init when too many diffs are buffered.
@@ -10,7 +15,6 @@
 - Generate server and client code so that the grid dimensions are defined in one place
 - Do the tests leak goroutines?
 - For tests in which blocking forever indicates failure, add timeouts to help with debugging
-- Pick an appropriate port number.
 - Pick appropriate WebSocket buffer sizes to pass to Upgrader. See Gorilla WebSocket documentation.
 - Look into using Gorilla WebSocket readJSON and writeJSON methods
 - Docker it up so app can run on any OS
