@@ -1,9 +1,10 @@
 #instructions {
-  margin: 8px;
+  margin: 10px;
 }
 
-/* Give board a position value so that overlay is positioned relative to it. */
 #board {
+  margin: 10px;
+  /* Give board a position value so that overlay is positioned relative to it. */
   position: relative;
 }
 
