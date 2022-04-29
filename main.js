@@ -23,7 +23,7 @@ overlay.addEventListener("dragstart", (e) => {
 // Set of overlay cells (div elements) that have been filled.
 const filledOverlayCells = new Set();
 
-// Allow drawing and erasing with a mouse.
+// Allow drawing and erasing by clicking or dragging with a mouse.
 // mouseDrawState is either "drawing", "erasing", or undefined.
 let mouseDrawState;
 overlay.addEventListener("mousedown", (e) => {
@@ -43,20 +43,13 @@ document.addEventListener("mouseup", (e) => {
   mouseDrawState = undefined;
 });
 
-// Allow drawing and erasing with a single touch. User can tap on cells to
-// change them, or move one finger across the screen to draw/erase. Tapping
-// with two fingers does nothing. Moving two fingers across the screen should
-// invoke the browser's default behavior - scrolling, hopefully.
+// Allow drawing and erasing by dragging with a single touch.
 // touchDrawState is either "drawing", "erasing", or undefined.
 let touchDrawState;
-let isTapping = false;
 overlay.addEventListener("touchstart", (e) => {
   if (e.touches.length !== 1) {
-    // Stop registering a tap as soon as a second touch is detected.
-    isTapping = false;
     return;
   }
-  isTapping = true;
   if (e.target.className === "overlay_cell_filled") {
     touchDrawState = "erasing";
   } else {
@@ -67,7 +60,6 @@ overlay.addEventListener("touchmove", (e) => {
   if (e.touches.length !== 1) {
     return;
   }
-  isTapping = false;
   if (e.cancelable) {
     // Prevent scrolling.
     e.preventDefault();
@@ -85,17 +77,51 @@ overlay.addEventListener("touchmove", (e) => {
   drawOrErase(touchDrawState, el);
 });
 document.addEventListener("touchend", (e) => {
-  if (isTapping) {
-    drawOrErase(touchDrawState, e.target);
-    isTapping = false;
-    // Prevent further events from firing (including mousedown and mouseup).
-    e.preventDefault();
-  }
   touchDrawState = undefined;
 });
 document.addEventListener("touchcancel", (e) => {
-  isTapping = false;
   touchDrawState = undefined;
+});
+
+// Allow drawing and erasing by tapping with a single touch.
+// OK Google, play One Touch by LCD Soundsystem.
+// You might ask, why is this chunk of coded needed at all? The browser already
+// fires mousedown and mouseup when a tap ("click") is detected. Well, on
+// Safari for iOS and DuckDuckGo for Android, waiting for the mousedown event
+// leads to a very obvious delay between tap and response.
+let isTapping = false;
+overlay.addEventListener("touchstart", (e) => {
+  if (e.touches.length !== 1) {
+    // Cancel the tap when multiple touches are detected.
+    isTapping = false;
+  }
+  isTapping = true;
+});
+overlay.addEventListener("touchmove", (e) => {
+  isTapping = false;
+});
+overlay.addEventListener("touchend", (e) => {
+  if (e.touches.length !== 0) {
+    // There are still touches on the touch surface, so this isn't a tap.
+    isTapping = false;
+    return;
+  }
+  if (!isTapping) {
+    // This is the end of a one-touch movement, or a multi-touch interaction.
+    return;
+  }
+  const cell = e.target;
+  if (cell.className === "overlay_cell_filled") {
+    empty(cell);
+  } else {
+    fill(cell);
+  }
+  isTapping = false;
+  // Prevent further events from firing (including mousedown and mouseup).
+  e.preventDefault();
+});
+overlay.addEventListener("touchcancel", (e) => {
+  isTapping = false;
 });
 
 // Connect to the WebSocket server.
@@ -121,7 +147,7 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-// Allow submitting via submit button.
+// Allow submitting via the submit button.
 document.getElementById("submit").addEventListener("click", submit);
 
 function makeCells(callback) {

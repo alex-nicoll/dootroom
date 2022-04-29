@@ -1,4 +1,3 @@
-- Fix bug where tapping with one finger inside grid and one finger outside causes the outside to be filled
 - When page becomes visible, reconnect websocket if it is currently disconnected
 - Create run.sh: go test && go run . $1, and have main.go get port from command line args
 - Add install instructions to README
@@ -25,11 +24,13 @@
 
 Features:
 
-- Stamps
+- Allow grid to zoom independently of other content (iframe)
+- A way to zoom on devices that don't have pinch (e.g. mouse only)
 - Competing species (colors)
 - Auto reset, followed by free draw period
-- See what other players are drawing
-- Stamp builder
 - Langton's Ant
+- Stamps
+- Stamp builder
+- See what other players are drawing
 - Gamepad support
 - Something that requires a database
