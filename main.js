@@ -125,20 +125,16 @@ overlay.addEventListener("touchcancel", (e) => {
 });
 
 // Connect to the WebSocket server.
-const ws = new WebSocket(`ws:\/\/${document.location.host}`);
+let ws = connect();
 
-// Handle changes to the grid coming from the server.
-ws.onmessage = (msg) => {
-  msg.data.text().then((text) => {
-    const diff = JSON.parse(text);
-    for (const x in diff) {
-      for (const y in diff[x]) {
-        const cell = document.getElementById(`${x},${y}`);
-        cell.className = diff[x][y] ? "grid_cell_filled" : "grid_cell_empty";
-      }
-    }
-  });
-}
+// Disconnect when the page is hidden, and reconnect when it's visible again.
+document.addEventListener("visibilitychange", (e) => {
+  if (document.visibilityState === "hidden") {
+    ws.close(1000, "page hidden");
+  } else if (document.visibilityState === "visible") {
+    ws = connect();
+  }
+});
 
 // Allow submitting via the Enter key.
 document.addEventListener("keydown", (e) => {
@@ -180,6 +176,25 @@ function drawOrErase(drawState, cell) {
   } else if (drawState === "erasing" && cell.className === "overlay_cell_filled") {
     empty(cell);
   }
+}
+
+function connect() {
+  const ws = new WebSocket(`ws:\/\/${document.location.host}`);
+  ws.addEventListener("message", update);
+  return ws;
+}
+
+// update handles a grid change coming from the server.
+function update(msg) {
+  msg.data.text().then((text) => {
+    const diff = JSON.parse(text);
+    for (const x in diff) {
+      for (const y in diff[x]) {
+        const cell = document.getElementById(`${x},${y}`);
+        cell.className = diff[x][y] ? "grid_cell_filled" : "grid_cell_empty";
+      }
+    }
+  });
 }
 
 // submit sends the grid changes represented by the filled overlay cells to the server.

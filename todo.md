@@ -1,4 +1,3 @@
-- When page becomes visible, reconnect websocket if it is currently disconnected
 - Create run.sh: go test && go run . $1, and have main.go get port from command line args
 - Add install instructions to README
 - Link to github and game of life wiki
