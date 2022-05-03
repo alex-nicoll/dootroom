@@ -1,0 +1,16 @@
+#!/bin/bash
+echo 'Running tests...'
+go test
+if [[ $? != 0 ]]
+then
+  exit $?
+fi
+port=$1
+if [[ $port == '' ]]
+then
+  port=8080
+fi
+logfile='mgol.log'
+echo "Running server at port $port"
+go run . $port >> $logfile 2>&1
+echo "Server stopped. View the output log '$logfile' for details."

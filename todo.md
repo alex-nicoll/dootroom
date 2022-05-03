@@ -1,5 +1,3 @@
-- Create run.sh: go test && go run . $1, and have main.go get port from command line args
-- Add install instructions to README
 - Link to github and game of life wiki
 - Max clients
 - Handle server sending updates faster than UI can render them.

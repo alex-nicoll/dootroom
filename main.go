@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/gorilla/websocket"
 )
@@ -43,5 +44,5 @@ func main() {
 	http.HandleFunc("/main.css", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "./main.css")
 	})
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(":"+os.Args[1], nil))
 }
