@@ -24,7 +24,7 @@ const SendBufferLen = 256
 // order via channels.  It returns a function that runs readPump in a goroutine
 // that sends messages to gol, and runs writePump in a goroutine that receives
 // messages from hub.
-func startPipeline() func(Read, Write, Close) (sync.WaitGroup, *ErrorSignal) {
+func startPipeline() func(Read, Write, Close) (*sync.WaitGroup, *ErrorSignal) {
 	golChan := make(chan interface{})
 	attachConn := startPipelineInternal(golChan, golChan)
 	go clock(golChan)
@@ -34,15 +34,15 @@ func startPipeline() func(Read, Write, Close) (sync.WaitGroup, *ErrorSignal) {
 // Internal implementation of startPipeline exposed for testing purposes. This
 // allows an additional stage to be added between readPump and gol, and omits
 // clock so that tests can control gol via Tick messages.
-func startPipelineInternal(readPumpOut chan interface{}, golChan chan interface{}) func(Read, Write, Close) (sync.WaitGroup, *ErrorSignal) {
+func startPipelineInternal(readPumpOut chan interface{}, golChan chan interface{}) func(Read, Write, Close) (*sync.WaitGroup, *ErrorSignal) {
 	hubChan := make(chan interface{})
 
 	go gol(golChan, hubChan)
 	go hub(hubChan)
 
-	return func(re Read, wr Write, cl Close) (wg sync.WaitGroup, errSig *ErrorSignal) {
+	return func(re Read, wr Write, cl Close) (*sync.WaitGroup, *ErrorSignal) {
 		// ErrorSignal for this connection
-		errSig = NewErrorSignal()
+		errSig := NewErrorSignal()
 		// Channel of messages to send on this connection
 		sendChan := make(chan []byte, SendBufferLen)
 
@@ -74,6 +74,7 @@ func startPipelineInternal(readPumpOut chan interface{}, golChan chan interface{
 			cl()
 		}
 
+		var wg sync.WaitGroup
 		wg.Add(2)
 		go func() {
 			defer wg.Done()
@@ -83,7 +84,7 @@ func startPipelineInternal(readPumpOut chan interface{}, golChan chan interface{
 			defer wg.Done()
 			readPump(errSig, re, readPumpOut)
 		}()
-		return
+		return &wg, errSig
 	}
 }
 

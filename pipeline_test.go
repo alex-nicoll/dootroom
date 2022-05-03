@@ -246,14 +246,13 @@ func Test_sendBufferOverflow(t *testing.T) {
 
 // When an error occurs related to a connection and resources are cleaned up,
 // no goroutines should be leaked.
-func test_leak(t *testing.T) {
+func Test_leak(t *testing.T) {
 	attachConn := startPipeline()
 	closed := make(chan struct{})
 	wg, errSig := attachConn(
 		newReadUntilClosedFn(closed),
 		func(messageType int, data []byte) error {
-			// block forever
-			select {}
+			return nil
 		},
 		newCloseFn(closed),
 	)
