@@ -2,6 +2,14 @@
 // parsed. It adds additional elements to the document, sets up event handlers,
 // and sets up the WebSocket connection.
 
+// Allow inputting the species (a seven-character hexadecimal color code).
+let species = "#eaeaea";
+const speciesInput = document.getElementById("species");
+speciesInput.value = species;
+speciesInput.addEventListener("input", (e) => {
+  species = e.target.value;
+});
+
 // Create the grid.
 const grid = document.getElementById("grid");
 grid.appendChild(makeCells((cell, x, y) => {
@@ -20,8 +28,9 @@ overlay.addEventListener("dragstart", (e) => {
   e.preventDefault();
 });
 
-// Set of overlay cells (div elements) that have been filled.
-const filledOverlayCells = new Set();
+// Map where the key is an overlay cell (div element) that has been filled, and
+// the value is the species used to fill that cell.
+const filledOverlayCells = new Map();
 
 // Allow drawing and erasing by clicking or dragging with a mouse.
 // mouseDrawState is either "drawing", "erasing", or undefined.
@@ -152,7 +161,8 @@ function makeCells(callback) {
     for (let y = 0; y < 100; y++) {
       const cell = document.createElement("div");
       // CSS Grid rows and columns are indexed at 1, as opposed to 0.
-      cell.style = `grid-row:${x+1};grid-column:${y+1};`;
+      cell.style.gridRow = `${x+1}`;
+      cell.style.gridColumn = `${y+1}`;
       callback(cell, x, y);
       frag.appendChild(cell);
     }
@@ -162,11 +172,17 @@ function makeCells(callback) {
 
 function fill(cell) {
   cell.className = "overlay_cell_filled";
-  filledOverlayCells.add(cell);
+  cell.style.backgroundColor = species;
+  // Store the species along with the cell, to be sent to the server later. We
+  // won't be able to use the value of style.backgroundColor, because it may be
+  // converted from hexadecimal to something else (e.g., an RGB string),
+  // whereas the server accepts only hexadecimal strings.
+  filledOverlayCells.set(cell, species);
 }
 
 function empty(cell) {
   cell.className = "";
+  cell.style.backgroundColor = "";
   filledOverlayCells.delete(cell);
 }
 
@@ -191,7 +207,14 @@ function update(msg) {
     for (const x in diff) {
       for (const y in diff[x]) {
         const cell = document.getElementById(`${x},${y}`);
-        cell.className = diff[x][y] ? "grid_cell_filled" : "grid_cell_empty";
+        const species = diff[x][y];
+        if (species !== "") {
+          cell.className = "grid_cell_filled";
+          cell.style.backgroundColor = species;
+        } else {
+          cell.className = "grid_cell_empty";
+          cell.style.backgroundColor = "";
+        }
       }
     }
   });
@@ -203,16 +226,16 @@ function submit() {
     return;
   }
   const diff = {};
-  for (const cell of filledOverlayCells) {
+  filledOverlayCells.forEach((species, cell) => {
     const x_ysuffix = cell.id.split(",");
     const x = x_ysuffix[0];
     const y = x_ysuffix[1].split("-overlay")[0];
     if (diff[x] === undefined) {
       diff[x] = {};
     }
-    diff[x][y] = true;
+    diff[x][y] = species;
 
     empty(cell);
-  }
+  });
   ws.send(JSON.stringify(diff));
 }

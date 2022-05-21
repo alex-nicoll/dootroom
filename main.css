@@ -1,27 +1,25 @@
-#instructions {
+#instructions, #species_form, #board {
   margin: 10px;
 }
 
+/* Give board a position value so that overlay is positioned relative to it. */
 #board {
-  margin: 10px;
-  /* Give board a position value so that overlay is positioned relative to it. */
   position: relative;
 }
 
 #grid {
   display: grid;
-  grid-auto-rows: 12px;
-  grid-auto-columns: 12px;
+  grid-auto-rows: 16px;
+  grid-auto-columns: 16px;
 }
 
 .grid_cell_empty {
-  background-color: silver;
-  border: 1px solid lightgray;
+  background-color: lightgray;
+  border: 1px solid silver;
 }
 
 .grid_cell_filled {
-  background-color: gray;
-  border: 1px solid lightgray;
+  border: 3px outset silver;
 }
 
 #overlay {
@@ -29,14 +27,13 @@
   position: absolute;
   top: 0;
   display: grid;
-  grid-auto-rows: 12px;
-  grid-auto-columns: 12px;
-  opacity: 0.4;
+  grid-auto-rows: 16px;
+  grid-auto-columns: 16px;
+  opacity: 0.6;
 }
 
 .overlay_cell_filled {
-  background-color: teal;
-  border: 1px solid lightgray;
+  border: 3px inset silver;
 }
 
 #submit {

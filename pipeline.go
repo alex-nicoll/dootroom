@@ -130,7 +130,7 @@ type Tick struct{}
 // gol maintains the state of an instance of Conway's Game of Life, merging in
 // changes from clients and propogating changes to hub to be broadcast to
 // clients.
-func gol(in chan interface{}, hubChan chan<- interface{}) {
+func gol(in <-chan interface{}, hubChan chan<- interface{}) {
 	grid, diff := &Grid{}, make(Diff)
 
 	// We could handle one Merge message and an arbitrary number of

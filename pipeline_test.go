@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -24,7 +25,8 @@ func Test_pipeline(t *testing.T) {
 			return nil
 		}
 		cl = func() error {
-			panic("Unexpected call to Close")
+			t.Errorf("Unexpected call to Close")
+			return nil
 		}
 		return
 	}
@@ -38,11 +40,11 @@ func Test_pipeline(t *testing.T) {
 	attachConn(re1, wr1, cl1)
 	attachConn(re2, wr2, cl2)
 
-	json := string(<-out1)
+	json := string(recv(t, out1))
 	if !strings.HasPrefix(json, "[") {
 		t.Errorf("Got incorrect JSON: %v", json)
 	}
-	json = string(<-out2)
+	json = string(recv(t, out2))
 	if !strings.HasPrefix(json, "[") {
 		t.Errorf("Got incorrect JSON: %v", json)
 	}
@@ -52,21 +54,21 @@ func Test_pipeline(t *testing.T) {
 	// then a tick occurs, the pipeline should send the combined diff to each
 	// connection.
 
-	diff1 := "{\"30\":{\"30\":true},\"31\":{\"32\":true}}"
-	diff2 := "{\"30\":{\"30\":true,\"31\":true},\"31\":{\"31\":true},\"32\":{\"31\":true}}"
-	combinedDiff := "{\"30\":{\"30\":true,\"31\":true},\"31\":{\"31\":true,\"32\":true},\"32\":{\"31\":true}}"
+	diff1 := "{\"30\":{\"30\":\"#aaaaaa\"},\"31\":{\"32\":\"#aaaaaa\"}}"
+	diff2 := "{\"30\":{\"30\":\"#aaaaaa\",\"31\":\"#aaaaaa\"},\"31\":{\"31\":\"#aaaaaa\"},\"32\":{\"31\":\"#aaaaaa\"}}"
+	combinedDiff := "{\"30\":{\"30\":\"#aaaaaa\",\"31\":\"#aaaaaa\"},\"31\":{\"31\":\"#aaaaaa\",\"32\":\"#aaaaaa\"},\"32\":{\"31\":\"#aaaaaa\"}}"
 
-	in1 <- []byte(diff1)
-	in2 <- []byte(diff2)
-	modelChan <- <-readPumpOut
-	modelChan <- <-readPumpOut
-	modelChan <- &Tick{}
+	send(t, in1, []byte(diff1))
+	send(t, in2, []byte(diff2))
+	forward(t, modelChan, readPumpOut)
+	forward(t, modelChan, readPumpOut)
+	send[interface{}](t, modelChan, &Tick{})
 
-	json = string(<-out1)
+	json = string(recv(t, out1))
 	if json != combinedDiff {
 		t.Errorf("Got incorrect JSON: %v", json)
 	}
-	json = string(<-out2)
+	json = string(recv(t, out2))
 	if json != combinedDiff {
 		t.Errorf("Got incorrect JSON: %v", json)
 	}
@@ -74,15 +76,15 @@ func Test_pipeline(t *testing.T) {
 	// When a tick occurs, the pipeline should send the diff between the
 	// current state and the previous state to each connection.
 
-	diff := "{\"30\":{\"32\":true},\"31\":{\"31\":false},\"32\":{\"32\":true}}"
+	diff := "{\"30\":{\"32\":\"#aaaaaa\"},\"31\":{\"31\":\"\"},\"32\":{\"32\":\"#aaaaaa\"}}"
 
-	modelChan <- &Tick{}
+	send[interface{}](t, modelChan, &Tick{})
 
-	json = string(<-out1)
+	json = string(recv(t, out1))
 	if json != diff {
 		t.Errorf("Got incorrect JSON: %v", json)
 	}
-	json = string(<-out2)
+	json = string(recv(t, out2))
 	if json != diff {
 		t.Errorf("Got incorrect JSON: %v", json)
 	}
@@ -95,8 +97,8 @@ func Test_pipeline(t *testing.T) {
 
 	attachConn(re3, wr3, cl3)
 
-	json = string(<-out3)
-	if !strings.HasPrefix(json, "[") || !strings.Contains(json, "true") {
+	json = string(recv(t, out3))
+	if !strings.HasPrefix(json, "[") || !strings.Contains(json, "\"#aaaaaa\"") {
 		t.Errorf("Got incorrect JSON: %v", json)
 	}
 }
@@ -125,7 +127,7 @@ func Test_invalidDiff2(t *testing.T) {
 // connection, a close message should be sent on the connection and then the
 // connection should be closed.
 func Test_invalidDiff3(t *testing.T) {
-	invalidMessageTestTemplate(t, []byte(fmt.Sprintf("{\"0\":{\"%v\":true}}", GridDimY)))
+	invalidMessageTestTemplate(t, []byte(fmt.Sprintf("{\"0\":{\"%v\":\"#aaaaaa\"}}", GridDimY)))
 }
 
 // When valid JSON that is not a valid Game of Life diff comes in on a
@@ -133,6 +135,48 @@ func Test_invalidDiff3(t *testing.T) {
 // connection should be closed.
 func Test_invalidDiff4(t *testing.T) {
 	invalidMessageTestTemplate(t, []byte("{\"0\":{}}"))
+}
+
+// When valid JSON that is not a valid Game of Life diff comes in on a
+// connection, a close message should be sent on the connection and then the
+// connection should be closed.
+func Test_invalidDiff5(t *testing.T) {
+	invalidMessageTestTemplate(t, []byte("{\"0\":{\"0\":\"#123\"}}"))
+}
+
+// When valid JSON that is not a valid Game of Life diff comes in on a
+// connection, a close message should be sent on the connection and then the
+// connection should be closed.
+func Test_invalidDiff6(t *testing.T) {
+	invalidMessageTestTemplate(t, []byte("{\"0\":{\"0\":\"#123xyz\"}}"))
+}
+
+// When valid JSON that is not a valid Game of Life diff comes in on a
+// connection, a close message should be sent on the connection and then the
+// connection should be closed.
+func Test_invalidDiff7(t *testing.T) {
+	invalidMessageTestTemplate(t, []byte("{\"0\":{\"0\":\"a#123abc\"}}"))
+}
+
+// When valid JSON that is not a valid Game of Life diff comes in on a
+// connection, a close message should be sent on the connection and then the
+// connection should be closed.
+func Test_invalidDiff8(t *testing.T) {
+	invalidMessageTestTemplate(t, []byte("{\"0\":{\"0\":\"#123abcc\"}}"))
+}
+
+// When valid JSON that is not a valid Game of Life diff comes in on a
+// connection, a close message should be sent on the connection and then the
+// connection should be closed.
+func Test_invalidDiff9(t *testing.T) {
+	invalidMessageTestTemplate(t, []byte("{\"0\":{\"0\":\"#123abc#123abc\"}}"))
+}
+
+// When valid JSON that is not a valid Game of Life diff comes in on a
+// connection, a close message should be sent on the connection and then the
+// connection should be closed.
+func Test_invalidDiff10(t *testing.T) {
+	invalidMessageTestTemplate(t, []byte("{\"0\":{\"0\":\"\"}}"))
 }
 
 // When reading from the connection returns an error that is not due to the
@@ -149,9 +193,9 @@ func Test_errorReadingMessage(t *testing.T) {
 		newCloseFn(closed),
 	)
 	// Handle the GoL state initialization message
-	<-out
+	recv(t, out)
 
-	in <- errors.New("dummy error")
+	send(t, in, errors.New("dummy error"))
 
 	verifyCloseMsgSentAndConnClosed(t, out, closed)
 }
@@ -173,11 +217,11 @@ func Test_errorReadingMessageClosedByClient(t *testing.T) {
 		newCloseFn(closed),
 	)
 	// Handle the GoL state initialization message
-	<-out
+	recv(t, out)
 
-	in <- &websocket.CloseError{}
+	send[error](t, in, &websocket.CloseError{})
 
-	<-closed
+	recv(t, closed)
 	select {
 	case <-out:
 		t.Errorf("Unexpected message sent on connection.")
@@ -201,7 +245,7 @@ func Test_errorWritingMessage(t *testing.T) {
 	// attachConn should have caused the GoL state initialization message to be
 	// sent, thus producing an error.
 
-	<-closed
+	recv(t, closed)
 }
 
 // When the send buffer overflows, a close message should be sent on the
@@ -221,27 +265,28 @@ func Test_sendBufferOverflow(t *testing.T) {
 
 	// This automaton runs forever, alternating between two states. This allows
 	// us to produce an arbitrary number of outgoing messages.
-	in <- []byte("{\"20\":{\"20\":true,\"21\":true,\"22\":true}}")
-	modelChan <- <-readPumpOut
+	send(t, in, []byte("{\"20\":{\"20\":\"#aaaaaa\",\"21\":\"#aaaaaa\",\"22\":\"#aaaaaa\"}}"))
+	forward(t, modelChan, readPumpOut)
 	// Produce SendBufferLen+1 Ticks in order to overflow the send buffer.
 	// writePump should currently be blocked trying to write the GoL state
 	// initialization message to the connection, so no messages should be
 	// pulled out of the send buffer.
 	for i := 1; i <= SendBufferLen+1; i++ {
-		modelChan <- &Tick{}
+		send[interface{}](t, modelChan, &Tick{})
 	}
 	// Wait for the buffer to overflow.
-	<-errSig.Done()
+	recv(t, errSig.Done())
 
 	// Unblock writePump. It may send some messages before sending the close
 	// message because it randomly chooses whether to pull a message out of
 	// the send buffer or read the error signal.
 	for {
-		if <-out == websocket.CloseMessage {
+		m := recv(t, out)
+		if m == websocket.CloseMessage {
 			break
 		}
 	}
-	<-closed
+	recv(t, closed)
 }
 
 // When an error occurs related to a connection and resources are cleaned up,
@@ -276,9 +321,9 @@ func invalidMessageTestTemplate(t *testing.T, message []byte) {
 		newCloseFn(closed),
 	)
 	// Handle the GoL state initialization message
-	<-out
+	recv(t, out)
 
-	in <- message
+	send(t, in, message)
 
 	verifyCloseMsgSentAndConnClosed(t, out, closed)
 }
@@ -324,9 +369,37 @@ func newCloseFn(closed chan struct{}) Close {
 }
 
 func verifyCloseMsgSentAndConnClosed(t *testing.T, out chan int, closed chan struct{}) {
-	messageType := <-out
+	messageType := recv(t, out)
 	if messageType != websocket.CloseMessage {
 		t.Errorf("Expected CloseMessage but got message type %v", messageType)
 	}
-	<-closed
+	recv(t, closed)
+}
+
+// recv performs the channel receive operation with a timeout.
+func recv[U any](t *testing.T, ch <-chan U) U {
+	select {
+	case <-time.After(2 * time.Second):
+		t.Errorf("Channel receive operation timed out")
+		var zero U
+		return zero
+	case v := <-ch:
+		return v
+	}
+}
+
+// send performs the channel send operation with a timeout.
+func send[U any](t *testing.T, ch chan<- U, v U) {
+	select {
+	case <-time.After(2 * time.Second):
+		t.Errorf("Channel send operation timed out")
+	case ch <- v:
+	}
+	return
+}
+
+// forward copies a value from chOut to chIn, with a timeout for each channel
+// operation.
+func forward[U any](t *testing.T, chIn chan<- U, chOut <-chan U) {
+	send(t, chIn, recv(t, chOut))
 }

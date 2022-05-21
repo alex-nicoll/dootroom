@@ -5,29 +5,25 @@
   - Profile and speed up rendering.
 - Reduce overloading of the term "grid". Currently refers to CSS module, HTML element, and backend data structure.
 - Try using SVG or canvas instead of HTML div's for grid
-- Simplify model. Server only needs to send the cells that changed state, not the new state. Likewise for the client.
 - On init, server can send just the live cells, rather than the whole grid, so long as the client can distinguish between an init and a diff.
 - Write test for client side code (input: ws; output: document)
 - Generate server and client code so that the grid dimensions are defined in one place
 - Do the tests leak goroutines?
-- For tests in which blocking forever indicates failure, add timeouts to help with debugging
 - Pick appropriate WebSocket buffer sizes to pass to Upgrader. See Gorilla WebSocket documentation.
 - Look into using Gorilla WebSocket readJSON and writeJSON methods
 - Docker it up so app can run on any OS
-- Cloud infrastructure
-- CI/CD pipeline
 - Browser testing with Selenium (or BrowserStack/LambdaTest to hit macOS)
+- CI/CD pipeline
 - Design doc. This would be a good place to explain that gol+hub+writePump maintains the order of InitListener and Tick messages, so that the client stays in sync with the server.
 
 Features:
 
 - Allow grid to zoom independently of other content (iframe)
 - A way to zoom on devices that don't have pinch (e.g. mouse only)
-- Competing species (colors)
+- Toroidal array
 - Auto reset, followed by free draw period
 - Langton's Ant
 - Stamps
 - Stamp builder
-- See what other players are drawing
 - Gamepad support
 - Something that requires a database
