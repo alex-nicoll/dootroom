@@ -2,25 +2,61 @@
 <html>
   <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Multiplayer Conway's Game of Life</title>
     <link href="main.css" rel="stylesheet">
     <script type="module" src="main.js"></script>
   </head>
   <body>
-    <p id="instructions">
-      Welcome! You are looking at a little multiplayer version of 
-      <a href="https://en.wikipedia.org/wiki/Conway's_Game_of_Life"/>John Conway's Game of Life</a>.<br>
-      Click or drag over cells to change them. Click Submit or press the Enter/Return key when done.<br>
-      Mobile users: Use two fingers to scroll across the grid.
-    </p>
-    <div id="species_form">
-      <label for="species">Species:</label>
-      <input id="species" type="color">
+    <div id="header">
+      <div id="header_left">
+        <img id="info" src="info_icon.svg" alt="Info button" />
+      </div>
+      <div id="header_center">Multiplayer Life</div>
+      <div id="header_right">
+        <p>
+          <a href="https://conwaylife.com/wiki/Special:RandomInCategory/Patterns">Random Pattern</a> | 
+          <a href="https://github.com/alex-nicoll/multi-gol">GitHub</a>
+        </p>
+      </div>
     </div>
     <div id="board">
       <div id="grid"></div>
       <div id="overlay"></div>
     </div>
-    <button id="submit">Submit</button>
+    <div id="controls">
+      <input id="species" type="color">
+      <button id="submit">Submit</button>
+    </div>
+    <div id="modal_container">
+      <div id="modal">
+        <div id="modal_header">
+          <img id="close" src="close_icon.svg" alt="Close button" />
+        </div>
+        <div id="modal_content">
+          <p id="instructions">
+            <b>Controls</b><br>
+            Click and drag to draw and erase.<br>
+            Click Submit or press the Enter/Return key to submit your changes.<br>
+            On mobile, use two fingers to scroll.<br>
+            <br>
+            <b>About</b><br>
+            You are looking at a multiplayer version of 
+            <a href="https://en.wikipedia.org/wiki/Conway's_Game_of_Life"/>John Conway's Game of Life</a>.
+            In this version, players can edit the grid from their browsers simultaneously, and watch each 
+            other's changes unfold and interact. The game never resets, so you'll likely see some remnants 
+            of past civilizations.<br>
+            <br>
+            This version also has "competing species". Each cell takes on the most populous neighboring 
+            color. If multiple colors are tied, one is chosen at random. This gives rise to "color 
+            oscillators" from otherwise <a href="https://conwaylife.com/wiki/Still_life">still lifes</a>. 
+            For example, try drawing a <a href="https://conwaylife.com/wiki/Beehive">beehive</a> composed 
+            of two colors.<br>
+            <br>
+            <img src="beehive_oscillator.png" alt="Beehive oscillator" />
+          </p>
+        </div>
+      </div>
+    </div>
   </body>
 </html>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="29.841mm" height="29.591mm" version="1.1" viewBox="0 0 29.840866 29.590982" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<defs>
+<linearGradient id="a">
+<stop stop-color="#b2b2b2" offset="0"/>
+</linearGradient>
+<linearGradient id="b" x1="16.492" x2="48.492" y1="26.031" y2="26.031" gradientTransform="matrix(.84503 0 0 .83722 5.3637 3.5361)" gradientUnits="userSpaceOnUse" xlink:href="#a"/>
+<linearGradient id="c" x1="87.375" x2="92.045" y1="76.469" y2="76.469" gradientUnits="userSpaceOnUse" xlink:href="#a"/>
+</defs>
+<g transform="translate(-17.9 -10.534)">
+<ellipse cx="32.82" cy="25.33" rx="13.52" ry="13.395" fill="none" stroke="url(#b)" stroke-width="2.8"/>
+<text transform="matrix(.26458 0 0 .26458 -9.8098 -6.9584)" x="5.1888084" fill="url(#c)" fill-rule="evenodd" font-family="Cousine" font-size="96px" font-weight="bold" stroke-width="7.5591" text-align="center" style="shape-inside:url(#rect9039);white-space:pre" xml:space="preserve"><tspan x="132.62988" y="154.48556">?</tspan></text>
+</g>
+</svg>

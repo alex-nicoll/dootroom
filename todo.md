@@ -1,4 +1,4 @@
-- Link to github and game of life wiki
+- Disable caching
 - Max clients
 - Handle server sending updates faster than UI can render them.
   - Have client ask for another init when too many diffs are buffered.
@@ -18,11 +18,13 @@
 
 Features:
 
-- Allow grid to zoom independently of other content (iframe)
-- A way to zoom on devices that don't have pinch (e.g. mouse only)
+- Toggle between editing and moving with one finger
+- Zoom +/- buttons
+- Random starting color
 - Toroidal array
-- Auto reset, followed by free draw period
+- Move controls to the right side of the screen in landscape mode
 - Langton's Ant
+- Auto reset, followed by free draw period
 - Stamps
 - Stamp builder
 - Gamepad support

@@ -1,60 +1,229 @@
-#instructions, #species_form, #board {
-  margin: 10px;
+/* A note on height:
+ * It is intended that the entire page be visible, so that the user does not
+ * need to scroll up and down to access parts of the UI. To this end, it would
+ * seem reasonable to use the vh unit, setting the height of the page content
+ * equal to the height of the layout viewport. That doesn't work on Safari and
+ * other mobile browsers, however, where the address bar covers part of the
+ * layout viewport until the user scrolls. Instead we'll set the height of the
+ * page content to 100% of the root element height, which appears to be equal
+ * to the actually visible part of the layout viewport when the page loads.
+ * When using a % value for height, the parent element must have a height
+ * value, or else the height property on the child does nothing. So we give
+ * html and body a height of 100%, for starters.
+ */
+
+:root {
+  --header-height: 50px;
+  --header-btn-height: 30px;
+  --controls-height: 10%;
+  --board-height: calc(100% - var(--header-height) - var(--controls-height));
 }
 
-/* Give board a position value so that overlay is positioned relative to it. */
+html, body {
+  height: 100%
+}
+
+body {
+  margin: 0;
+}
+
+#header {
+  height: var(--header-height); 
+  display: flex;
+}
+
+#header_left, #header_center, #header_right {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+#header_left {
+  justify-content: left;
+  padding-left: 2%;
+}
+
+#header_center {
+  justify-content: center;
+  text-align: center;
+  font-size: 1.3rem;
+}
+
+#header_right {
+  justify-content: right;
+  padding-right: 2%;
+  text-align: center;
+  font-size: 1.1rem;
+}
+
+#info {
+  height: var(--header-btn-height);
+  cursor: pointer;
+}
+
 #board {
+  /* Give board a position value so that overlay is positioned relative to it. */
   position: relative;
+  height: var(--board-height);
+  overflow: scroll;
+  margin-left: 1%;
+  margin-right: 1%;
 }
 
-#grid {
+#grid, #overlay {
   display: grid;
-  grid-auto-rows: 16px;
-  grid-auto-columns: 16px;
-}
-
-.grid_cell_empty {
-  background-color: lightgray;
-  border: 1px solid silver;
-}
-
-.grid_cell_filled {
-  border: 3px outset silver;
 }
 
 #overlay {
   z-index: 1;
   position: absolute;
   top: 0;
-  display: grid;
-  grid-auto-rows: 16px;
-  grid-auto-columns: 16px;
   opacity: 0.6;
 }
 
+.grid_cell_empty {
+  background-color: lightgray;
+  border: solid silver;
+}
+
+.grid_cell_filled {
+  border: outset silver;
+}
+
 .overlay_cell_filled {
-  border: 3px inset silver;
+  border: inset silver;
+}
+
+@media (min-width: 769px) {
+  #grid, #overlay {
+    grid-auto-rows: 1.2vmax;
+    grid-auto-columns: 1.2vmax;
+  }
+
+  .grid_cell_empty {
+    border-width: .075vmax;
+  }
+
+  .grid_cell_filled {
+    border-width: .15vmax;
+  }
+
+  .overlay_cell_filled {
+    border-width: .15vmax;
+  }
+}
+@media (max-width: 768px) {
+  #grid, #overlay {
+    grid-auto-rows: 2.4vmax;
+    grid-auto-columns: 2.4vmax;
+  }
+
+  .grid_cell_empty {
+    border-width: .15vmax;
+  }
+
+  .grid_cell_filled {
+    border-width: .3vmax;
+  }
+
+  .overlay_cell_filled {
+    border-width: .3vmax;
+  }
+}
+
+#controls {
+  height: var(--controls-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#species, #submit {
+  height: 80%;
+  margin: calc(var(--controls-height) / 10);
+}
+
+@media (min-width: 769px) {
+  #species, #submit {
+    width: 16vw;
+  }
+} 
+@media (max-width: 768px) {
+  #species, #submit {
+    width: 50%;
+  }
 }
 
 #submit {
-  z-index: 2;
-  position: sticky;
-  bottom: 0;
-  left: 0;
-  height: 4rem;
-  width: 100vw;
   text-align: center;
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   color: dodgerblue;
-  background-color: rgba(235, 250, 250, 0.7);
-  border: 4px solid rgba(173, 216, 230, 0.7);
+  background-color: rgba(245, 255, 255);
+  border: 3px outset rgba(180, 220, 235);
 }
 
-body {
-  /* Remove the margin so that the submit button is always flush with the
-   * viewport. */
-  margin: 0;
-  /* The below is needed in order to get the submit button to stick to the left
-   * side of the viewport. */
-  display: inline-block;
+#submit:active {
+  border-style: inset;
+}
+
+/* modal_container completely covers board */
+#modal_container {
+  z-index: 2;
+  position: absolute;
+  top: var(--header-height);
+  bottom: var(--controls-height);
+  height: var(--board-height);
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#modal {
+  background-color: white;
+  border: ridge silver;
+  /* Using max-height rather than height causes modal to shrink to the height
+   * of its children when the children take up < 90% of modal_container's
+   * height.
+   */
+  max-height: 90%;
+  /* If, on the other hand, modal's childen take up > 90% of modal_container's
+   * height, then the below two properties along with {overflow: scroll} on
+   * modal_content cause modal_content to shrink to fit inside modal. */
+  display: flex;
+  flex-direction: column;
+}
+
+#modal_content {
+  overflow: scroll;
+}
+
+@media (min-width: 769px) {
+  #modal {
+    width: 65%;
+  }
+} 
+@media (max-width: 768px) {
+  #modal {
+    width: 90%;
+  }
+}
+
+#modal_header {
+  height: var(--header-height);
+  display: flex;
+  align-items: center;
+  justify-content: right;
+  /* Make close equidistant from the top and right sides of modal_header. */
+  padding-right: calc((var(--header-height) - var(--header-btn-height))/2);
+}
+
+#close {
+  height: var(--header-btn-height);
+  cursor: pointer;
+}
+
+#instructions {
+  margin: 1% 1%;
+  font-size: 1.1rem;
 }

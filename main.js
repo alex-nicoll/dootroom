@@ -2,6 +2,15 @@
 // parsed. It adds additional elements to the document, sets up event handlers,
 // and sets up the WebSocket connection.
 
+// Allow the modal to be opened and closed.
+const modal = document.getElementById("modal_container");
+document.getElementById("info").addEventListener("click", (e) => {
+  modal.style.visibility = "visible";
+});
+document.getElementById("close").addEventListener("click", (e) => {
+  modal.style.visibility = "hidden";
+});
+
 // Allow inputting the species (a seven-character hexadecimal color code).
 let species = "#eaeaea";
 const speciesInput = document.getElementById("species");
