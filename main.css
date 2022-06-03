@@ -14,8 +14,9 @@
 
 :root {
   --header-height: 50px;
-  --header-btn-height: 30px;
-  --controls-height: 10%;
+  --header-btn-dim: calc(.6 * var(--header-height));
+  --controls-height: 70px;
+  --controls-btn-dim: calc(.8 * var(--controls-height));
   --board-height: calc(100% - var(--header-height) - var(--controls-height));
 }
 
@@ -57,8 +58,8 @@ body {
 }
 
 #info {
-  height: var(--header-btn-height);
-  cursor: pointer;
+  height: var(--header-btn-dim);
+  width: var(--header-btn-dim);
 }
 
 #board {
@@ -138,32 +139,10 @@ body {
   justify-content: center;
 }
 
-#species, #submit {
-  height: 80%;
+#move, #species, #submit {
+  height: var(--controls-btn-dim);
+  width: var(--controls-btn-dim);
   margin: calc(var(--controls-height) / 10);
-}
-
-@media (min-width: 769px) {
-  #species, #submit {
-    width: 16vw;
-  }
-} 
-@media (max-width: 768px) {
-  #species, #submit {
-    width: 50%;
-  }
-}
-
-#submit {
-  text-align: center;
-  font-size: 1.3rem;
-  color: dodgerblue;
-  background-color: rgba(245, 255, 255);
-  border: 3px outset rgba(180, 220, 235);
-}
-
-#submit:active {
-  border-style: inset;
 }
 
 /* modal_container completely covers board */
@@ -215,15 +194,34 @@ body {
   align-items: center;
   justify-content: right;
   /* Make close equidistant from the top and right sides of modal_header. */
-  padding-right: calc((var(--header-height) - var(--header-btn-height))/2);
+  padding-right: calc((var(--header-height) - var(--header-btn-dim))/2);
 }
 
 #close {
-  height: var(--header-btn-height);
-  cursor: pointer;
+  height: var(--header-btn-dim);
+  width: var(--header-btn-dim);
 }
 
 #instructions {
   margin: 1% 1%;
   font-size: 1.1rem;
+}
+
+.icon_button {
+  cursor: pointer;
+  filter: invert(30%);
+}
+
+/* Class to apply to an icon button when it is touched or moused over.
+ * One would think that the :hover pseudo-class could be used for this, but it
+ * causes problems on touch devices; after being touched, the icon enters the
+ * hover state, and remains there until the user touches somewhere else. */
+.icon_button_over {
+  filter: invert(10%);
+}
+
+/* Class to apply to the move icon button when it is enabled. */
+.move_enabled {
+    outline: solid calc((var(--controls-height) - var(--controls-btn-dim)) / 4);
+    border-radius: 6px;
 }

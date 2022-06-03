@@ -1,3 +1,11 @@
+- Fix move button outline not appearing in Safari for iOS
+- Add padding to board
+- Update instructions
+- Reevaluate whether event listeners should be attached to overlay or board
+- Update and run tests.md
+- Refactor js to reduce scope of variables
+- Make panning with the mouse smoother
+- Consider making move button a toggle composed of two buttons stitched together: left side crossed arrows, right side pencil
 - Disable caching
 - Max clients
 - Handle server sending updates faster than UI can render them.
@@ -18,10 +26,10 @@
 
 Features:
 
-- Toggle between editing and moving with one finger
 - Zoom +/- buttons
 - Toroidal array
 - Move controls to the right side of the screen in landscape mode
+- Panning with arrow keys
 - Langton's Ant
 - Auto reset, followed by free draw period
 - Stamps

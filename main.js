@@ -1,13 +1,32 @@
 // This script should be run after the HTML document has been loaded and
 // parsed. It adds additional elements to the document, sets up event handlers,
 // and sets up the WebSocket connection.
+//
+// You will see a few statements like this:
+//   const x = (() => {...})();
+// There will be some variables inside the ..., and some functions returned and
+// assigned to x. The purpose is to keep the variables together with the
+// functions that modify them. The expression on the right hand side of the
+// assignment is often called an IIFE: Immediately Invoked Function Expression.
+
+// Allow icon buttons to change state when touched or moused over.
+const iconButtons = document.getElementsByClassName("icon_button");
+for (let i = 0; i < iconButtons.length; i++) {
+  const ib = iconButtons.item(i);
+  ib.addEventListener("pointerenter", (e) => {
+    ib.classList.add("icon_button_over");
+  });
+  ib.addEventListener("pointerleave", (e) => {
+    ib.classList.remove("icon_button_over");
+  });
+}
 
 // Allow the modal to be opened and closed.
 const modal = document.getElementById("modal_container");
-document.getElementById("info").addEventListener("click", (e) => {
+iconButtons.namedItem("info").addEventListener("click", (e) => {
   modal.style.visibility = "visible";
 });
-document.getElementById("close").addEventListener("click", (e) => {
+iconButtons.namedItem("close").addEventListener("click", (e) => {
   modal.style.visibility = "hidden";
 });
 
@@ -39,109 +58,250 @@ overlay.addEventListener("dragstart", (e) => {
   e.preventDefault();
 });
 
+// Prevent the board from scrolling when the mouse is pressed down inside the
+// board and then dragged to the edge of the board.
+const board = document.getElementById("board");
+let isDraggingBoard;
+board.addEventListener("mousedown", (e) => {
+  isDraggingBoard = true;
+});
+board.addEventListener("mousemove", (e) => {
+  e.preventDefault();
+});
+document.addEventListener("mouseup", (e) => {
+  isDraggingBoard = false;
+});
+
 // Map where the key is an overlay cell (div element) that has been filled, and
 // the value is the species used to fill that cell.
 const filledOverlayCells = new Map();
 
-// Allow drawing and erasing by clicking or dragging with a mouse.
-// mouseDrawState is either "drawing", "erasing", or undefined.
-let mouseDrawState;
-overlay.addEventListener("mousedown", (e) => {
-  const cell = e.target;
-  if (cell.className === "overlay_cell_filled") {
-    empty(cell);
-    mouseDrawState = "erasing";
-  } else {
-    fill(cell);
-    mouseDrawState = "drawing";
-  }
-});
-overlay.addEventListener("mouseover", (e) => {
-  drawOrErase(mouseDrawState, e.target);
-});
-document.addEventListener("mouseup", (e) => {
-  mouseDrawState = undefined;
-});
+// Object mouseDraw allows drawing and erasing by clicking or dragging with a
+// mouse.
+const mouseDraw = (() => {
+  // drawState is either "drawing", "erasing", or undefined.
+  let drawState;
 
-// Allow drawing and erasing by dragging with a single touch.
-// touchDrawState is either "drawing", "erasing", or undefined.
-let touchDrawState;
-overlay.addEventListener("touchstart", (e) => {
-  if (e.touches.length !== 1) {
-    return;
+  function handleMouseDown(e) {
+    const cell = e.target;
+    if (cell.className === "overlay_cell_filled") {
+      empty(cell);
+      drawState = "erasing";
+    } else {
+      fill(cell);
+      drawState = "drawing";
+    }
   }
-  if (e.target.className === "overlay_cell_filled") {
-    touchDrawState = "erasing";
-  } else {
-    touchDrawState = "drawing";
+
+  function handleMouseOver(e) {
+    drawOrErase(drawState, e.target);
   }
-});
-overlay.addEventListener("touchmove", (e) => {
-  if (e.touches.length !== 1) {
-    return;
+
+  function handleMouseUp(e) {
+    drawState = undefined;
   }
-  if (e.cancelable) {
-    // Prevent scrolling.
+
+  return {
+    enable: () => {
+      overlay.addEventListener("mousedown", handleMouseDown);
+      overlay.addEventListener("mouseover", handleMouseOver);
+      document.addEventListener("mouseup", handleMouseUp);
+    },
+    disable: () => {
+      overlay.removeEventListener("mousedown", handleMouseDown);
+      overlay.removeEventListener("mouseover", handleMouseOver);
+      document.removeEventListener("mouseup", handleMouseUp);
+      drawState = undefined;
+    }
+  };
+})();
+
+// Object touchDraw allows drawing and erasing by dragging with a single touch.
+const touchDraw = (() => {
+  // drawState is either "drawing", "erasing", or undefined.
+  let drawState;
+
+  function handleTouchStart(e) {
+    if (e.touches.length !== 1) {
+      return;
+    }
+    if (e.target.className === "overlay_cell_filled") {
+      drawState = "erasing";
+    } else {
+      drawState = "drawing";
+    }
+  }
+
+  function handleTouchMove(e) {
+    if (e.touches.length !== 1) {
+      return;
+    }
+    if (e.cancelable) {
+      // Prevent scrolling.
+      e.preventDefault();
+    }
+    const touch = e.touches.item(0);
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (!el) {
+      // Touch moved outside of the viewport.
+      return;
+    }
+    if (!el.id.endsWith("-overlay")) {
+      // Touch moved outside of the overlay.
+      return;
+    }
+    drawOrErase(drawState, el);
+  }
+
+  function handleTouchEnd(e) {
+    drawState = undefined;
+  }
+
+  function handleTouchCancel(e) {
+    drawState = undefined;
+  }
+
+  return {
+    enable: () => {
+      overlay.addEventListener("touchstart", handleTouchStart);
+      overlay.addEventListener("touchmove", handleTouchMove);
+      document.addEventListener("touchend", handleTouchEnd);
+      document.addEventListener("touchcancel", handleTouchCancel);
+    },
+    disable: () => {
+      overlay.removeEventListener("touchstart", handleTouchStart);
+      overlay.removeEventListener("touchmove", handleTouchMove);
+      document.removeEventListener("touchend", handleTouchEnd);
+      document.removeEventListener("touchcancel", handleTouchCancel);
+      drawState = undefined;
+    }
+  };
+})();
+
+// Object tapDraw allows drawing and erasing by tapping with a single touch.
+// You might ask, why is this object needed at all? The browser already fires
+// mousedown and mouseup when a tap ("click") is detected. Well, on Safari for
+// iOS and DuckDuckGo for Android, waiting for the mousedown event leads to a
+// very obvious delay between tap and response.
+const tapDraw = (() => {
+  let isTapping = false;
+
+  function handleTouchStart(e) {
+    if (e.touches.length !== 1) {
+      // Cancel the tap when multiple touches are detected.
+      isTapping = false;
+    }
+    isTapping = true;
+  }
+
+  function handleTouchMove(e) {
+    isTapping = false;
+  }
+
+  function handleTouchEnd(e) {
+    if (e.touches.length !== 0) {
+      // There are still touches on the touch surface, so this isn't a tap.
+      isTapping = false;
+      return;
+    }
+    if (!isTapping) {
+      // This is the end of a one-touch movement, or a multi-touch interaction.
+      return;
+    }
+    const cell = e.target;
+    if (cell.className === "overlay_cell_filled") {
+      empty(cell);
+    } else {
+      fill(cell);
+    }
+    isTapping = false;
+    // Prevent further events from firing (including mousedown and mouseup).
     e.preventDefault();
   }
-  const touch = e.touches.item(0);
-  const el = document.elementFromPoint(touch.clientX, touch.clientY);
-  if (!el) {
-    // Touch moved outside of the viewport.
-    return;
-  }
-  if (!el.id.endsWith("-overlay")) {
-    // Touch moved outside of the overlay.
-    return;
-  }
-  drawOrErase(touchDrawState, el);
-});
-document.addEventListener("touchend", (e) => {
-  touchDrawState = undefined;
-});
-document.addEventListener("touchcancel", (e) => {
-  touchDrawState = undefined;
-});
 
-// Allow drawing and erasing by tapping with a single touch.
-// OK Google, play One Touch by LCD Soundsystem.
-// You might ask, why is this chunk of coded needed at all? The browser already
-// fires mousedown and mouseup when a tap ("click") is detected. Well, on
-// Safari for iOS and DuckDuckGo for Android, waiting for the mousedown event
-// leads to a very obvious delay between tap and response.
-let isTapping = false;
-overlay.addEventListener("touchstart", (e) => {
-  if (e.touches.length !== 1) {
-    // Cancel the tap when multiple touches are detected.
+  function handleTouchCancel(e) {
     isTapping = false;
   }
-  isTapping = true;
-});
-overlay.addEventListener("touchmove", (e) => {
-  isTapping = false;
-});
-overlay.addEventListener("touchend", (e) => {
-  if (e.touches.length !== 0) {
-    // There are still touches on the touch surface, so this isn't a tap.
-    isTapping = false;
-    return;
+
+  return {
+    enable: () => {
+      overlay.addEventListener("touchstart", handleTouchStart);
+      overlay.addEventListener("touchmove", handleTouchMove);
+      overlay.addEventListener("touchend", handleTouchEnd);
+      overlay.addEventListener("touchcancel", handleTouchCancel);
+    },
+    disable: () => {
+      overlay.removeEventListener("touchstart", handleTouchStart);
+      overlay.removeEventListener("touchmove", handleTouchMove);
+      overlay.removeEventListener("touchend", handleTouchEnd);
+      overlay.removeEventListener("touchcancel", handleTouchCancel);
+      isTapping = false;
+    }
+  };
+})();
+
+// Object mousePan allows panning by dragging with a mouse.
+const mousePan = (() => {
+  let isPanning = false;
+
+  function handleMouseDown(e) {
+    isPanning = true;
   }
-  if (!isTapping) {
-    // This is the end of a one-touch movement, or a multi-touch interaction.
-    return;
+
+  function handleMouseMove(e) {
+    if (isPanning) {
+      board.scrollTop -= e.movementY;
+      board.scrollLeft -= e.movementX;
+    }
   }
-  const cell = e.target;
-  if (cell.className === "overlay_cell_filled") {
-    empty(cell);
+
+  function handleMouseUp(e) {
+    isPanning = false;
+  }
+
+  return {
+    enable: () => {
+      board.addEventListener("mousedown", handleMouseDown);
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+    },
+    disable: () => {
+      board.removeEventListener("mousedown", handleMouseDown);
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      isPanning = false;
+    }
+  };
+})();
+
+// Allow switching between pan mode and draw/erase mode.
+// isPanMode is true when we are in pan mode, and false when we are in
+// draw/erase mode.
+let isPanMode = false;
+mouseDraw.enable();
+touchDraw.enable();
+tapDraw.enable();
+iconButtons.namedItem("move").addEventListener("click", (e) => {
+  if (isPanMode) {
+    isPanMode = false;
+    mousePan.disable();
+
+    mouseDraw.enable();
+    touchDraw.enable();
+    tapDraw.enable();
+
+    move.classList.remove("move_enabled");
+
   } else {
-    fill(cell);
+    isPanMode = true;
+    mousePan.enable();
+
+    mouseDraw.disable();
+    touchDraw.disable();
+    tapDraw.disable();
+
+    move.classList.add("move_enabled");
   }
-  isTapping = false;
-  // Prevent further events from firing (including mousedown and mouseup).
-  e.preventDefault();
-});
-overlay.addEventListener("touchcancel", (e) => {
-  isTapping = false;
 });
 
 // Connect to the WebSocket server.
@@ -164,7 +324,7 @@ document.addEventListener("keydown", (e) => {
 });
 
 // Allow submitting via the submit button.
-document.getElementById("submit").addEventListener("click", submit);
+iconButtons.namedItem("submit").addEventListener("click", submit);
 
 function makeCells(callback) {
   const frag = document.createDocumentFragment();

@@ -44,12 +44,6 @@ func main() {
 	http.HandleFunc("/main.css", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "./main.css")
 	})
-	http.HandleFunc("/info_icon.svg", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./info_icon.svg")
-	})
-	http.HandleFunc("/close_icon.svg", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./close_icon.svg")
-	})
 	http.HandleFunc("/beehive_oscillator.png", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "./beehive_oscillator.png")
 	})
