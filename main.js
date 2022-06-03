@@ -12,7 +12,9 @@ document.getElementById("close").addEventListener("click", (e) => {
 });
 
 // Allow inputting the species (a seven-character hexadecimal color code).
-let species = "#eaeaea";
+// Start with a random species.
+let species = "#" +
+  Math.floor(Math.random() * Math.pow(2,24)).toString(16).padStart(6, "0");
 const speciesInput = document.getElementById("species");
 speciesInput.value = species;
 speciesInput.addEventListener("input", (e) => {

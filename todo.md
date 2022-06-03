@@ -20,7 +20,6 @@ Features:
 
 - Toggle between editing and moving with one finger
 - Zoom +/- buttons
-- Random starting color
 - Toroidal array
 - Move controls to the right side of the screen in landscape mode
 - Langton's Ant
