@@ -1,4 +1,3 @@
-- Fix move button outline not appearing in Safari for iOS
 - Add padding to board
 - Update instructions
 - Reevaluate whether event listeners should be attached to overlay or board

@@ -14,9 +14,9 @@
 
 :root {
   --header-height: 50px;
-  --header-btn-dim: calc(.6 * var(--header-height));
+  --header-btn-height: calc(.6 * var(--header-height));
   --controls-height: 70px;
-  --controls-btn-dim: calc(.8 * var(--controls-height));
+  --controls-btn-height: calc(.8 * var(--controls-height));
   --board-height: calc(100% - var(--header-height) - var(--controls-height));
 }
 
@@ -58,8 +58,8 @@ body {
 }
 
 #info {
-  height: var(--header-btn-dim);
-  width: var(--header-btn-dim);
+  height: var(--header-btn-height);
+  width: var(--header-btn-height);
 }
 
 #board {
@@ -140,9 +140,22 @@ body {
 }
 
 #move, #species, #submit {
-  height: var(--controls-btn-dim);
-  width: var(--controls-btn-dim);
   margin: calc(var(--controls-height) / 10);
+}
+
+#species, #submit {
+  height: var(--controls-btn-height);
+  width: var(--controls-btn-height);
+}
+
+#move {
+  --border-width: calc(.06 * var(--controls-btn-height));
+  --height: calc(var(--controls-btn-height) - (2 * var(--border-width))); 
+  border: var(--border-width) solid;
+  border-radius: 6px;
+  border-color: transparent;
+  height: var(--height);
+  width: var(--height);
 }
 
 /* modal_container completely covers board */
@@ -163,8 +176,7 @@ body {
   border: ridge silver;
   /* Using max-height rather than height causes modal to shrink to the height
    * of its children when the children take up < 90% of modal_container's
-   * height.
-   */
+   * height. */
   max-height: 90%;
   /* If, on the other hand, modal's childen take up > 90% of modal_container's
    * height, then the below two properties along with {overflow: scroll} on
@@ -194,12 +206,12 @@ body {
   align-items: center;
   justify-content: right;
   /* Make close equidistant from the top and right sides of modal_header. */
-  padding-right: calc((var(--header-height) - var(--header-btn-dim))/2);
+  padding-right: calc((var(--header-height) - var(--header-btn-height))/2);
 }
 
 #close {
-  height: var(--header-btn-dim);
-  width: var(--header-btn-dim);
+  height: var(--header-btn-height);
+  width: var(--header-btn-height);
 }
 
 #instructions {
@@ -218,10 +230,4 @@ body {
  * hover state, and remains there until the user touches somewhere else. */
 .icon_button_over {
   filter: invert(10%);
-}
-
-/* Class to apply to the move icon button when it is enabled. */
-.move_enabled {
-    outline: solid calc((var(--controls-height) - var(--controls-btn-dim)) / 4);
-    border-radius: 6px;
 }

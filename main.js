@@ -281,7 +281,8 @@ let isPanMode = false;
 mouseDraw.enable();
 touchDraw.enable();
 tapDraw.enable();
-iconButtons.namedItem("move").addEventListener("click", (e) => {
+const move = iconButtons.namedItem("move");
+move.addEventListener("click", (e) => {
   if (isPanMode) {
     isPanMode = false;
     mousePan.disable();
@@ -290,7 +291,10 @@ iconButtons.namedItem("move").addEventListener("click", (e) => {
     touchDraw.enable();
     tapDraw.enable();
 
-    move.classList.remove("move_enabled");
+    // Setting style.borderColor creates an inline style declaration,
+    // overriding the style defined in CSS. Setting style.borderColor to ""
+    // resets the inline style declaration, no longer overriding the CSS style.
+    move.style.borderColor = "";
 
   } else {
     isPanMode = true;
@@ -300,7 +304,7 @@ iconButtons.namedItem("move").addEventListener("click", (e) => {
     touchDraw.disable();
     tapDraw.disable();
 
-    move.classList.add("move_enabled");
+    move.style.borderColor = "unset";
   }
 });
 
