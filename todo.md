@@ -1,4 +1,3 @@
-- Update instructions
 - Reevaluate whether event listeners should be attached to overlay or board
 - Update and run tests.md
 - Refactor js to reduce scope of variables
@@ -26,6 +25,7 @@ Features:
 
 - Zoom +/- buttons
 - Toroidal array
+- Gene mixing and mutating
 - Move controls to the right side of the screen in landscape mode
 - Panning with arrow keys
 - Langton's Ant
