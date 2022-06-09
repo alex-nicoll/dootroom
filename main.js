@@ -8,6 +8,13 @@
 // assigned to x. The purpose is to keep the variables together with the
 // functions that modify them. The expression on the right hand side of the
 // assignment is often called an IIFE: Immediately Invoked Function Expression.
+//
+// There are also statments like this:
+//   element.style.x = "something"
+// This creates an inline style declaration for property x, overriding the
+// style declared in CSS. Setting x to "" removes the inline style declaration,
+// no longer overriding the style declared in CSS. See
+// https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/style
 
 // Allow icon buttons to change state when touched or moused over.
 const iconButtons = document.getElementsByClassName("icon_button");
@@ -24,7 +31,7 @@ for (let i = 0; i < iconButtons.length; i++) {
 // Allow the modal to be opened and closed.
 const modal = document.getElementById("modal_container");
 iconButtons.namedItem("info").addEventListener("click", (e) => {
-  modal.style.visibility = "visible";
+  modal.style.visibility = "";
 });
 iconButtons.namedItem("close").addEventListener("click", (e) => {
   modal.style.visibility = "hidden";
@@ -291,9 +298,6 @@ move.addEventListener("click", (e) => {
     touchDraw.enable();
     tapDraw.enable();
 
-    // Setting style.borderColor creates an inline style declaration,
-    // overriding the style defined in CSS. Setting style.borderColor to ""
-    // resets the inline style declaration, no longer overriding the CSS style.
     move.style.borderColor = "";
 
   } else {
