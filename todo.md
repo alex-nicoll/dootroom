@@ -1,4 +1,3 @@
-- Add padding to board
 - Update instructions
 - Reevaluate whether event listeners should be attached to overlay or board
 - Update and run tests.md

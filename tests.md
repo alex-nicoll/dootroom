@@ -15,3 +15,7 @@ Clients to test:
 - Drawing on the overlay element with one finger and then moving that finger off of the overlay does not cause non-cell elements to change state. (previous bug)
 - Same as above, but further moving the finger outside of the viewport does not cause an error to be logged. (previous bug)
 - Minimize the browser for 5 seconds so that the page is completely hidden, then bring it back into view. The grid should still be updating. This can be observed by drawing and submitting changes. (previous bug: grid would stop updating due to the WebSocket connection being closed)
+- In draw/erase mode, clicking on the overlay padding does not cause the entire overlay to change color.
+- In draw/erase mode, pressing the mouse down on an empty overlay cell and then dragging the mouse over the overlay padding does not cause the entire overlay to change color.
+- In draw/erase mode, touching one finger to an empty overlay cell and then sliding the finger over the overlay padding does not cause the entire overlay to change color.
+- In draw/erase mode, tapping on the overlay padding with one finger does not cause the entire overlay to change color.

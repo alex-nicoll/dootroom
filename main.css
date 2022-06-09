@@ -67,12 +67,11 @@ body {
   position: relative;
   height: var(--board-height);
   overflow: scroll;
-  margin-left: 1%;
-  margin-right: 1%;
+  background-color: silver;
 }
 
 #grid, #overlay {
-  display: grid;
+  padding: 20px;
 }
 
 #overlay {
@@ -80,6 +79,10 @@ body {
   position: absolute;
   top: 0;
   opacity: 0.6;
+}
+
+#grid, #overlay_cells {
+  display: grid;
 }
 
 .grid_cell_empty {
@@ -96,7 +99,7 @@ body {
 }
 
 @media (min-width: 769px) {
-  #grid, #overlay {
+  #grid, #overlay_cells {
     grid-auto-rows: 1.2vmax;
     grid-auto-columns: 1.2vmax;
   }
@@ -114,7 +117,7 @@ body {
   }
 }
 @media (max-width: 768px) {
-  #grid, #overlay {
+  #grid, #overlay_cells {
     grid-auto-rows: 2.4vmax;
     grid-auto-columns: 2.4vmax;
   }

@@ -40,21 +40,21 @@ speciesInput.addEventListener("input", (e) => {
   species = e.target.value;
 });
 
-// Create the grid.
+// Create the grid cells.
 const grid = document.getElementById("grid");
 grid.appendChild(makeCells((cell, x, y) => {
   cell.id = `${x},${y}`
   cell.className = "grid_cell_empty";
 }));
 
-// Create the overlay. 
-const overlay = document.getElementById("overlay");
-overlay.appendChild(makeCells((cell, x, y) => {
+// Create the overlay cells. 
+const overlay_cells = document.getElementById("overlay_cells");
+overlay_cells.appendChild(makeCells((cell, x, y) => {
   cell.id = `${x},${y}-overlay`
 }));
 
 // Prevent dragging of overlay elements.
-overlay.addEventListener("dragstart", (e) => {
+overlay_cells.addEventListener("dragstart", (e) => {
   e.preventDefault();
 });
 
@@ -103,13 +103,13 @@ const mouseDraw = (() => {
 
   return {
     enable: () => {
-      overlay.addEventListener("mousedown", handleMouseDown);
-      overlay.addEventListener("mouseover", handleMouseOver);
+      overlay_cells.addEventListener("mousedown", handleMouseDown);
+      overlay_cells.addEventListener("mouseover", handleMouseOver);
       document.addEventListener("mouseup", handleMouseUp);
     },
     disable: () => {
-      overlay.removeEventListener("mousedown", handleMouseDown);
-      overlay.removeEventListener("mouseover", handleMouseOver);
+      overlay_cells.removeEventListener("mousedown", handleMouseDown);
+      overlay_cells.removeEventListener("mouseover", handleMouseOver);
       document.removeEventListener("mouseup", handleMouseUp);
       drawState = undefined;
     }
@@ -147,7 +147,7 @@ const touchDraw = (() => {
       return;
     }
     if (!el.id.endsWith("-overlay")) {
-      // Touch moved outside of the overlay.
+      // Touch moved outside of overlay_cells.
       return;
     }
     drawOrErase(drawState, el);
@@ -163,14 +163,14 @@ const touchDraw = (() => {
 
   return {
     enable: () => {
-      overlay.addEventListener("touchstart", handleTouchStart);
-      overlay.addEventListener("touchmove", handleTouchMove);
+      overlay_cells.addEventListener("touchstart", handleTouchStart);
+      overlay_cells.addEventListener("touchmove", handleTouchMove);
       document.addEventListener("touchend", handleTouchEnd);
       document.addEventListener("touchcancel", handleTouchCancel);
     },
     disable: () => {
-      overlay.removeEventListener("touchstart", handleTouchStart);
-      overlay.removeEventListener("touchmove", handleTouchMove);
+      overlay_cells.removeEventListener("touchstart", handleTouchStart);
+      overlay_cells.removeEventListener("touchmove", handleTouchMove);
       document.removeEventListener("touchend", handleTouchEnd);
       document.removeEventListener("touchcancel", handleTouchCancel);
       drawState = undefined;
@@ -225,16 +225,16 @@ const tapDraw = (() => {
 
   return {
     enable: () => {
-      overlay.addEventListener("touchstart", handleTouchStart);
-      overlay.addEventListener("touchmove", handleTouchMove);
-      overlay.addEventListener("touchend", handleTouchEnd);
-      overlay.addEventListener("touchcancel", handleTouchCancel);
+      overlay_cells.addEventListener("touchstart", handleTouchStart);
+      overlay_cells.addEventListener("touchmove", handleTouchMove);
+      overlay_cells.addEventListener("touchend", handleTouchEnd);
+      overlay_cells.addEventListener("touchcancel", handleTouchCancel);
     },
     disable: () => {
-      overlay.removeEventListener("touchstart", handleTouchStart);
-      overlay.removeEventListener("touchmove", handleTouchMove);
-      overlay.removeEventListener("touchend", handleTouchEnd);
-      overlay.removeEventListener("touchcancel", handleTouchCancel);
+      overlay_cells.removeEventListener("touchstart", handleTouchStart);
+      overlay_cells.removeEventListener("touchmove", handleTouchMove);
+      overlay_cells.removeEventListener("touchend", handleTouchEnd);
+      overlay_cells.removeEventListener("touchcancel", handleTouchCancel);
       isTapping = false;
     }
   };
