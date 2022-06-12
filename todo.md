@@ -1,5 +1,3 @@
-- Reevaluate whether event listeners should be attached to overlay or board
-- Update and run tests.md
 - Refactor js to reduce scope of variables
 - Make panning with the mouse smoother
 - Consider making move button a toggle composed of two buttons stitched together: left side crossed arrows, right side pencil

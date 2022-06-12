@@ -60,7 +60,7 @@ overlay_cells.appendChild(makeCells((cell, x, y) => {
   cell.id = `${x},${y}-overlay`
 }));
 
-// Prevent dragging of overlay elements.
+// Prevent dragging of overlay cells.
 overlay_cells.addEventListener("dragstart", (e) => {
   e.preventDefault();
 });
@@ -124,6 +124,9 @@ const mouseDraw = (() => {
 })();
 
 // Object touchDraw allows drawing and erasing by dragging with a single touch.
+// touchDraw only draws when a single touch moves. It doesn't draw when a
+// single touch starts, in order to prevent accidental drawing in case of a
+// multi-touch pan/zoom. As a result, we need some other way to handle taps.
 const touchDraw = (() => {
   // drawState is either "drawing", "erasing", or undefined.
   let drawState;
@@ -187,9 +190,9 @@ const touchDraw = (() => {
 
 // Object tapDraw allows drawing and erasing by tapping with a single touch.
 // You might ask, why is this object needed at all? The browser already fires
-// mousedown and mouseup when a tap ("click") is detected. Well, on Safari for
-// iOS and DuckDuckGo for Android, waiting for the mousedown event leads to a
-// very obvious delay between tap and response.
+// mousedown when a tap ("click") is detected, so mouseDraw should handle taps.
+// Well, on Safari for iOS and DuckDuckGo for Android, waiting for the
+// mousedown event leads to a very obvious delay between tap and response.
 const tapDraw = (() => {
   let isTapping = false;
 
@@ -222,7 +225,9 @@ const tapDraw = (() => {
       fill(cell);
     }
     isTapping = false;
-    // Prevent further events from firing (including mousedown and mouseup).
+    // Prevent further events from firing, including mousedown (and mouseup,
+    // and click). If mousedown were to fire with mouseDraw enabled, then we
+    // would erase the cell that was just drawn.
     e.preventDefault();
   }
 
