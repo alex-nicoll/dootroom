@@ -75,21 +75,23 @@ func Test_neighbors(t *testing.T) {
 		t.Errorf("Expected number of neighbors be 4 but got %v", n)
 	}
 	if sMax != "a" {
-		t.Errorf("Expected most populous species to be \"a\" but got %v", sMax)
+		t.Errorf("Expected most populous species to be \"a\" but got %q", sMax)
 	}
 }
 
 func Test_neighbors2(t *testing.T) {
 	grid := &Grid{}
 	grid[1][1] = "a"
+	grid[GridDimX-1][GridDimY-1] = "b"
+	grid[GridDimX-1][0] = "b"
 
 	n, sMax := neighbors(grid, 0, 0)
 
-	if n != 1 {
+	if n != 3 {
 		t.Errorf("Expected number of neighbors to be 1 but got %v", n)
 	}
-	if sMax != "a" {
-		t.Errorf("Expected most populous species to be \"a\" but got %v", sMax)
+	if sMax != "b" {
+		t.Errorf("Expected most populous species to be \"b\" but got %q", sMax)
 	}
 }
 

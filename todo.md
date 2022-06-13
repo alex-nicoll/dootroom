@@ -22,12 +22,11 @@
 Features:
 
 - Zoom +/- buttons
-- Toroidal array
+- A way to clear debris (eraser, reset button, automatic, ...)
 - Gene mixing and mutating
 - Move controls to the right side of the screen in landscape mode
 - Panning with arrow keys
 - Langton's Ant
-- Auto reset, followed by free draw period
 - Stamps
 - Stamp builder
 - Gamepad support

@@ -5,8 +5,8 @@ import (
 )
 
 const (
-	GridDimX = 100
-	GridDimY = 100
+	GridDimX = 150
+	GridDimY = 150
 )
 
 type Species = string
@@ -35,57 +35,59 @@ func merge(newDiff Diff, diff Diff) {
 
 // neighbors returns the number of live cells and most populous species in the
 // neighborhood of cell (x,y). If multiple species are tied for most populous,
-// neighbors chooses one at random.
+// neighbors chooses one at random. The neighborhood of a cell is defined such
+// that the left and right edges of the grid are stitched together, and the top
+// and bottom edges are stitched together.
 func neighbors(grid *Grid, x int, y int) (int, Species) {
+	var left int
+	if x == 0 {
+		left = GridDimX - 1
+	} else {
+		left = x - 1
+	}
+	var right int
+	if x == GridDimX-1 {
+		right = 0
+	} else {
+		right = x + 1
+	}
+	var up int
+	if y == 0 {
+		up = GridDimY - 1
+	} else {
+		up = y - 1
+	}
+	var down int
+	if y == GridDimY-1 {
+		down = 0
+	} else {
+		down = y + 1
+	}
 	sCount := make(map[Species]int)
 	var s Species
-	if x > 0 {
-		if y > 0 {
-			s = grid[x-1][y-1]
-			if s != "" {
-				sCount[s]++
-			}
-		}
-		s = grid[x-1][y]
-		if s != "" {
-			sCount[s]++
-		}
-		if y < GridDimY-1 {
-			s = grid[x-1][y+1]
-			if s != "" {
-				sCount[s]++
-			}
-		}
+	if s = grid[left][up]; s != "" {
+		sCount[s]++
 	}
-	if x < GridDimX-1 {
-		if y > 0 {
-			s = grid[x+1][y-1]
-			if s != "" {
-				sCount[s]++
-			}
-		}
-		s = grid[x+1][y]
-		if s != "" {
-			sCount[s]++
-		}
-		if y < GridDimY-1 {
-			s = grid[x+1][y+1]
-			if s != "" {
-				sCount[s]++
-			}
-		}
+	if s = grid[x][up]; s != "" {
+		sCount[s]++
 	}
-	if y > 0 {
-		s = grid[x][y-1]
-		if s != "" {
-			sCount[s]++
-		}
+	if s = grid[right][up]; s != "" {
+		sCount[s]++
 	}
-	if y < GridDimY-1 {
-		s = grid[x][y+1]
-		if s != "" {
-			sCount[s]++
-		}
+	if s = grid[left][y]; s != "" {
+		sCount[s]++
+	}
+	if s = grid[right][y]; s != "" {
+		sCount[s]++
+	}
+	if s = grid[left][down]; s != "" {
+		sCount[s]++
+	}
+	if s = grid[x][down]; s != "" {
+		sCount[s]++
+	}
+	if s = grid[right][down]; s != "" {
+		sCount[s]++
 	}
 	var n int
 	var sMax Species
