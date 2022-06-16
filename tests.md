@@ -2,14 +2,14 @@ Clients to test:
 - Asus c302ca, ChromeOS
 - iPhone 12, iOS 15, Safari
 
-- Minimize the browser for 5 seconds so that the page is completely hidden, then bring it back into view. The grid should still be updating. This can be observed by drawing and submitting changes. (previous bug: grid would stop updating due to the WebSocket connection being closed)
+- Minimize the browser for 5 seconds so that the page is completely hidden, then bring it back into view. The board should still be updating. This can be observed by drawing and submitting changes. (previous bug: board would stop updating due to the WebSocket connection being closed)
 - User can press the info button to open the modal, and press the close button to close the modal
-- User cannot interact with the board while the modal is displayed. (The reason is that the modal is centered using a invisible container element that takes up the full width of the page. The container element should then take up the full height of the board, because it would be weird for the user to be able to interact with only part of the board while the modal is displayed.)
+- User cannot interact with the view while the modal is displayed. (The reason is that the modal is centered using a invisible container element that takes up the full width of the page. The container element should then take up the full height of the view, because it would be weird for the user to be able to interact with only part of the view while the modal is displayed.)
 - If the modal content does not fit inside the modal, then the modal is scrollable. The close button remains visible as the modal is scrolled (previous bug).
 - User can press the species button to open a color picker, then select a new color from the color picker, then draw using the new color.
 - When the mouse is positioned over an icon button, the icon button changes state. When the mouse is moved off of the icon button, the icon button reverts back to its original state.
 - When a finger is placed on an icon button, the icon button changes state. When the finger is removed, the icon button reverts back to it its original state (previous bug).
-- The page is not scrollable. Header, board, and content are completely visible.
+- The page is not scrollable. Header, view, and controls are completely visible.
 
 Draw/erase mode:
 - User can tap on cells with one finger to draw and erase.
@@ -32,4 +32,4 @@ Draw/erase mode:
 Pan mode:
 - User can place one finger on the overlay and move it to pan.
 - User can drag with the mouse to pan.
-- Dragging the mouse to the edge of the overlay does not cause the board to scroll (previous bug).
+- Dragging the mouse to the edge of the view does not cause the view to scroll (previous bug).

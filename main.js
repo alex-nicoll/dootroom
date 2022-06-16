@@ -47,11 +47,11 @@ speciesInput.addEventListener("input", (e) => {
   species = e.target.value;
 });
 
-// Create the grid cells.
-const grid = document.getElementById("grid");
-grid.appendChild(makeCells((cell, x, y) => {
+// Create the board cells.
+const board = document.getElementById("board");
+board.appendChild(makeCells((cell, x, y) => {
   cell.id = `${x},${y}`
-  cell.className = "grid_cell_empty";
+  cell.className = "board_cell_empty";
 }));
 
 // Create the overlay cells. 
@@ -65,14 +65,14 @@ overlay_cells.addEventListener("dragstart", (e) => {
   e.preventDefault();
 });
 
-// Prevent the board from scrolling when the mouse is pressed down inside the
-// board and then dragged to the edge of the board.
-const board = document.getElementById("board");
+// Prevent the view from scrolling when the mouse is pressed down inside the
+// view and then dragged to the edge of the view.
+const view = document.getElementById("view");
 let isDraggingBoard;
-board.addEventListener("mousedown", (e) => {
+view.addEventListener("mousedown", (e) => {
   isDraggingBoard = true;
 });
-board.addEventListener("mousemove", (e) => {
+view.addEventListener("mousemove", (e) => {
   e.preventDefault();
 });
 document.addEventListener("mouseup", (e) => {
@@ -262,8 +262,8 @@ const mousePan = (() => {
 
   function handleMouseMove(e) {
     if (isPanning) {
-      board.scrollTop -= e.movementY;
-      board.scrollLeft -= e.movementX;
+      view.scrollTop -= e.movementY;
+      view.scrollLeft -= e.movementX;
     }
   }
 
@@ -273,12 +273,12 @@ const mousePan = (() => {
 
   return {
     enable: () => {
-      board.addEventListener("mousedown", handleMouseDown);
+      view.addEventListener("mousedown", handleMouseDown);
       document.addEventListener("mousemove", handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
     },
     disable: () => {
-      board.removeEventListener("mousedown", handleMouseDown);
+      view.removeEventListener("mousedown", handleMouseDown);
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
       isPanning = false;
@@ -384,7 +384,7 @@ function connect() {
   return ws;
 }
 
-// update handles a grid change coming from the server.
+// update handles a board change coming from the server.
 function update(msg) {
   msg.data.text().then((text) => {
     const diff = JSON.parse(text);
@@ -393,10 +393,10 @@ function update(msg) {
         const cell = document.getElementById(`${x},${y}`);
         const species = diff[x][y];
         if (species !== "") {
-          cell.className = "grid_cell_filled";
+          cell.className = "board_cell_filled";
           cell.style.backgroundColor = species;
         } else {
-          cell.className = "grid_cell_empty";
+          cell.className = "board_cell_empty";
           cell.style.backgroundColor = "";
         }
       }
@@ -404,7 +404,7 @@ function update(msg) {
   });
 }
 
-// submit sends the grid changes represented by the filled overlay cells to the server.
+// submit sends the board changes represented by the filled overlay cells to the server.
 function submit() {
   if (filledOverlayCells.size === 0) {
     return;

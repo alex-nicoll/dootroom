@@ -17,7 +17,7 @@
   --header-btn-height: calc(.6 * var(--header-height));
   --controls-height: 70px;
   --controls-btn-height: calc(.8 * var(--controls-height));
-  --board-height: calc(100% - var(--header-height) - var(--controls-height));
+  --view-height: calc(100% - var(--header-height) - var(--controls-height));
 }
 
 html, body {
@@ -60,15 +60,15 @@ body {
   width: var(--header-btn-height);
 }
 
-#board {
-  /* Give board a position value so that overlay is positioned relative to it. */
+#view {
+  /* Give view a position value so that overlay is positioned relative to it. */
   position: relative;
-  height: var(--board-height);
+  height: var(--view-height);
   overflow: scroll;
   background-color: silver;
 }
 
-#grid, #overlay {
+#board, #overlay {
   padding: 20px;
 }
 
@@ -79,16 +79,16 @@ body {
   opacity: 0.6;
 }
 
-#grid, #overlay_cells {
+#board, #overlay_cells {
   display: grid;
 }
 
-.grid_cell_empty {
+.board_cell_empty {
   background-color: lightgray;
   border: solid silver;
 }
 
-.grid_cell_filled {
+.board_cell_filled {
   border: outset silver;
 }
 
@@ -97,16 +97,16 @@ body {
 }
 
 @media (min-width: 769px) {
-  #grid, #overlay_cells {
+  #board, #overlay_cells {
     grid-auto-rows: 1.2vmax;
     grid-auto-columns: 1.2vmax;
   }
 
-  .grid_cell_empty {
+  .board_cell_empty {
     border-width: .075vmax;
   }
 
-  .grid_cell_filled {
+  .board_cell_filled {
     border-width: .15vmax;
   }
 
@@ -115,16 +115,16 @@ body {
   }
 }
 @media (max-width: 768px) {
-  #grid, #overlay_cells {
+  #board, #overlay_cells {
     grid-auto-rows: 2.4vmax;
     grid-auto-columns: 2.4vmax;
   }
 
-  .grid_cell_empty {
+  .board_cell_empty {
     border-width: .15vmax;
   }
 
-  .grid_cell_filled {
+  .board_cell_filled {
     border-width: .3vmax;
   }
 
@@ -159,13 +159,13 @@ body {
   width: var(--height);
 }
 
-/* modal_container completely covers board */
+/* modal_container completely covers view */
 #modal_container {
   z-index: 2;
   position: absolute;
   top: var(--header-height);
   bottom: var(--controls-height);
-  height: var(--board-height);
+  height: var(--view-height);
   width: 100%;
   display: flex;
   justify-content: center;

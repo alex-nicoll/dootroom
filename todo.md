@@ -6,8 +6,7 @@
 - Handle server sending updates faster than UI can render them.
   - Have client ask for another init when too many diffs are buffered.
   - Profile and speed up rendering.
-- Reduce overloading of the term "grid". Currently refers to CSS module, HTML element, and backend data structure.
-- Try using SVG or canvas instead of HTML div's for grid
+- Try using SVG or canvas instead of divs 
 - On init, server can send just the live cells, rather than the whole grid, so long as the client can distinguish between an init and a diff.
 - Write test for client side code (input: ws; output: document)
 - Generate server and client code so that the grid dimensions are defined in one place
