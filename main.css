@@ -31,6 +31,7 @@ body {
 #header {
   height: var(--header-height); 
   display: flex;
+  padding: 0px 18px
 }
 
 #header_left, #header_center, #header_right {
@@ -41,7 +42,6 @@ body {
 
 #header_left {
   justify-content: left;
-  padding-left: 2%;
 }
 
 #header_center {
@@ -52,7 +52,6 @@ body {
 
 #header_right {
   justify-content: right;
-  padding-right: 2%;
 }
 
 #info {
