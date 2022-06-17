@@ -81,56 +81,21 @@ body {
 
 #board, #overlay_cells {
   display: grid;
+  grid-auto-rows: 18px;
+  grid-auto-columns: 18px;
 }
 
 .board_cell_empty {
   background-color: lightgray;
-  border: solid silver;
+  border: 1.125px solid silver;
 }
 
 .board_cell_filled {
-  border: outset silver;
+  border: 2.25px outset silver;
 }
 
 .overlay_cell_filled {
-  border: inset silver;
-}
-
-@media (min-width: 769px) {
-  #board, #overlay_cells {
-    grid-auto-rows: 1.2vmax;
-    grid-auto-columns: 1.2vmax;
-  }
-
-  .board_cell_empty {
-    border-width: .075vmax;
-  }
-
-  .board_cell_filled {
-    border-width: .15vmax;
-  }
-
-  .overlay_cell_filled {
-    border-width: .15vmax;
-  }
-}
-@media (max-width: 768px) {
-  #board, #overlay_cells {
-    grid-auto-rows: 2.4vmax;
-    grid-auto-columns: 2.4vmax;
-  }
-
-  .board_cell_empty {
-    border-width: .15vmax;
-  }
-
-  .board_cell_filled {
-    border-width: .3vmax;
-  }
-
-  .overlay_cell_filled {
-    border-width: .3vmax;
-  }
+  border: 2.25px inset silver;
 }
 
 #controls {

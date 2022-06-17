@@ -341,8 +341,8 @@ iconButtons.namedItem("submit").addEventListener("click", submit);
 
 function makeCells(callback) {
   const frag = document.createDocumentFragment();
-  for (let x = 0; x < 150; x++) {
-    for (let y = 0; y < 150; y++) {
+  for (let x = 0; x < 120; x++) {
+    for (let y = 0; y < 120; y++) {
       const cell = document.createElement("div");
       // CSS Grid rows and columns are indexed at 1, as opposed to 0.
       cell.style.gridRow = `${x+1}`;

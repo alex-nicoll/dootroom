@@ -5,8 +5,8 @@ import (
 )
 
 const (
-	GridDimX = 150
-	GridDimY = 150
+	GridDimX = 120
+	GridDimY = 120
 )
 
 type Species = string
