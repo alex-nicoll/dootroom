@@ -325,7 +325,15 @@ document.addEventListener("visibilitychange", (e) => {
   if (document.visibilityState === "hidden") {
     ws.close(1000, "page hidden");
   } else if (document.visibilityState === "visible") {
-    ws = connect();
+    // We may sometimes get a "visible" visibilitychange event with no
+    // corresponding "hidden" event. This can happen, e.g., when minimizing
+    // Safari for iOS and then quickly maximizing it. So, create a new
+    // connection only if the previous one has been closed.
+    if (ws.readyState > 1) {
+      // readyState is CLOSING or CLOSED.
+      // https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/readyState
+      ws = connect();
+    }
   }
 });
 
