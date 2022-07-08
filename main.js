@@ -68,15 +68,15 @@ overlay_cells.addEventListener("dragstart", (e) => {
 // Prevent the view from scrolling when the mouse is pressed down inside the
 // view and then dragged to the edge of the view.
 const view = document.getElementById("view");
-let isDraggingBoard;
+let isDraggingView = false;
 view.addEventListener("mousedown", (e) => {
-  isDraggingBoard = true;
+  isDraggingView = true;
 });
 view.addEventListener("mousemove", (e) => {
   e.preventDefault();
 });
 document.addEventListener("mouseup", (e) => {
-  isDraggingBoard = false;
+  isDraggingView = false;
 });
 
 // Map where the key is an overlay cell (div element) that has been filled, and
@@ -317,22 +317,175 @@ move.addEventListener("click", (e) => {
   }
 });
 
-// Connect to the WebSocket server.
-let ws = connect();
+// buffer contains the enqueued diffs.
+let buffer = [];
 
-// Disconnect when the page is hidden, and reconnect when it's visible again.
+// Object ws supports connecting and disconnecting from the WebSocket server,
+// and submitting the diff represented by the filled overlay cells to the
+// server.
+const ws = (() => {
+  let websocket;
+
+  function connect() {
+    websocket = new WebSocket(`ws:\/\/${document.location.host}`);
+    websocket.addEventListener("message", bufferProcessor.enqueue);
+  }
+
+  function disconnect(reason) {
+    websocket.close(1000, reason);
+    buffer = [];
+  }
+
+  function submit() {
+    if (filledOverlayCells.size === 0) {
+      return;
+    }
+    const diff = {};
+    filledOverlayCells.forEach((species, cell) => {
+      const x_ysuffix = cell.id.split(",");
+      const x = x_ysuffix[0];
+      const y = x_ysuffix[1].split("-overlay")[0];
+      if (diff[x] === undefined) {
+        diff[x] = {};
+      }
+      diff[x][y] = species;
+
+      empty(cell);
+    });
+    websocket.send(JSON.stringify(diff));
+  }
+
+  return { connect, disconnect, submit };
+})();
+
+// Object bufferProcessor treats buffer as a FIFO queue of incoming board
+// diffs. Function enqueue takes a WebSocket message and adds the diff
+// contained within to buffer. Diffs are dequeued, parsed, and applied to the
+// board at a regular interval.
+//
+// When the empty diff ("{}") is dequeued, signaling the end of a stream,
+// dequeueing stops. When a new stream begins, dequeueing starts up again.
+//
+// The buffer is considered to be overflowing when it has greater than 5
+// elements. bufferProcessor periodically checks for overflow, and resets the
+// connection when this is the case.
+//
+// As a special case, enqueue handles the grid message (the first message on a
+// connection) by applying it to the board immediately. This is because the
+// server sends the grid immediately. Waiting to process it on the next "tick",
+// as if it were a diff, would incur a slight delay.
+//
+// See protocol.md for more information.
+const bufferProcessor = (() => {
+
+  const dequeueInterval = 170;
+  let dequeueIntervalID;
+  const timeBetweenBalances = 8000;
+  let balanceBufferTimeoutID;
+  let isBufferOverflowing = false;
+
+  function start() {
+    balanceBufferTimeoutID = setTimeout(balanceBuffer, timeBetweenBalances);
+  }
+
+  function stop() {
+    if (dequeueIntervalID !== undefined) {
+      clearInterval(dequeueIntervalID);
+      dequeueIntervalID = undefined;
+    }
+    clearTimeout(balanceBufferTimeoutID);
+    balanceBufferTimeoutID = undefined;
+  }
+
+  function balanceBuffer() {
+    if (isBufferOverflowing) {
+      ws.disconnect("buffer overflow");
+      ws.connect();
+    }
+    balanceBufferTimeoutID = setTimeout(balanceBuffer, timeBetweenBalances);
+  }
+
+  function enqueue(message) {
+    message.data.text().then((json) => {
+      if (dequeueIntervalID === undefined) {
+        dequeueIntervalID = setInterval(dequeue, dequeueInterval);
+      }
+      if (json.startsWith("[")) {
+        // Apply the grid message to the board immediately.
+        update(json);
+        return;
+      }
+      buffer.push(json);
+      checkForBufferOverflow();
+    });
+  }
+
+  function dequeue() {
+    if (buffer.length === 0) {
+      return;
+    }
+    const json = buffer.shift();
+    checkForBufferOverflow();
+    if (json === "{}" && buffer.length === 0) {
+      // We've reached the end of the current stream and there are no further
+      // diffs, so we can stop dequeueing. enqueue will start us dequeuing
+      // again when appropriate.
+      clearInterval(dequeueIntervalID);
+      dequeueIntervalID = undefined;
+      return;
+    }
+    update(json);
+  }
+
+  // update applies a grid or diff to the board.
+  function update(json) {
+    const change = JSON.parse(json);
+    for (const x in change) {
+      for (const y in change[x]) {
+        const cell = document.getElementById(`${x},${y}`);
+        const species = change[x][y];
+        if (species !== "") {
+          cell.className = "board_cell_filled";
+          cell.style.backgroundColor = species;
+        } else {
+          cell.className = "board_cell_empty";
+          cell.style.backgroundColor = "";
+        }
+      }
+    }
+  }
+
+  function checkForBufferOverflow() {
+    isBufferOverflowing = buffer.length >= 6;
+  }
+
+  return { start, stop, enqueue }
+})();
+
+bufferProcessor.start();
+// Connect to the WebSocket server.
+// Use setTimeout to ensure that all the costly DOM updates in this script
+// complete before we start enqueuing messages.
+setTimeout(ws.connect, 0);
+
+// Release resources when the page is hidden, and reallocate them when the page
+// becomes visible again.
+// We may get a visibilitychange event with visibilityState "visible" without
+// a corresponding "hidden" event. This was observed to happen on Safari for
+// iOS when minimizing the browser and then quickly maximizing it. So we use
+// isPageHidden to determine whether the visibility state actually changed from
+// "hidden" to "visible", thereby preventing a resource leak.
+let isPageHidden = false;
 document.addEventListener("visibilitychange", (e) => {
   if (document.visibilityState === "hidden") {
-    ws.close(1000, "page hidden");
+    bufferProcessor.stop();
+    ws.disconnect("page hidden");
+    isPageHidden = true;
   } else if (document.visibilityState === "visible") {
-    // We may sometimes get a "visible" visibilitychange event with no
-    // corresponding "hidden" event. This can happen, e.g., when minimizing
-    // Safari for iOS and then quickly maximizing it. So, create a new
-    // connection only if the previous one has been closed.
-    if (ws.readyState > 1) {
-      // readyState is CLOSING or CLOSED.
-      // https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/readyState
-      ws = connect();
+    if (isPageHidden) {
+      bufferProcessor.start();
+      ws.connect();
+      isPageHidden = false;
     }
   }
 });
@@ -340,12 +493,12 @@ document.addEventListener("visibilitychange", (e) => {
 // Allow submitting via the Enter key.
 document.addEventListener("keydown", (e) => {
   if (e.code === "Enter") {
-    submit();
+    ws.submit();
   }
 });
 
 // Allow submitting via the submit button.
-iconButtons.namedItem("submit").addEventListener("click", submit);
+iconButtons.namedItem("submit").addEventListener("click", ws.submit);
 
 function makeCells(callback) {
   const frag = document.createDocumentFragment();
@@ -384,50 +537,4 @@ function drawOrErase(drawState, cell) {
   } else if (drawState === "erasing" && cell.className === "overlay_cell_filled") {
     empty(cell);
   }
-}
-
-function connect() {
-  const ws = new WebSocket(`ws:\/\/${document.location.host}`);
-  ws.addEventListener("message", update);
-  return ws;
-}
-
-// update handles a board change coming from the server.
-function update(msg) {
-  msg.data.text().then((text) => {
-    const diff = JSON.parse(text);
-    for (const x in diff) {
-      for (const y in diff[x]) {
-        const cell = document.getElementById(`${x},${y}`);
-        const species = diff[x][y];
-        if (species !== "") {
-          cell.className = "board_cell_filled";
-          cell.style.backgroundColor = species;
-        } else {
-          cell.className = "board_cell_empty";
-          cell.style.backgroundColor = "";
-        }
-      }
-    }
-  });
-}
-
-// submit sends the board changes represented by the filled overlay cells to the server.
-function submit() {
-  if (filledOverlayCells.size === 0) {
-    return;
-  }
-  const diff = {};
-  filledOverlayCells.forEach((species, cell) => {
-    const x_ysuffix = cell.id.split(",");
-    const x = x_ysuffix[0];
-    const y = x_ysuffix[1].split("-overlay")[0];
-    if (diff[x] === undefined) {
-      diff[x] = {};
-    }
-    diff[x][y] = species;
-
-    empty(cell);
-  });
-  ws.send(JSON.stringify(diff));
 }

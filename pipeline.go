@@ -129,9 +129,14 @@ type Tick struct{}
 
 // gol maintains the state of an instance of Conway's Game of Life, merging in
 // changes from clients and propogating changes to hub to be broadcast to
-// clients.
+// clients. See protocol.md for more context regarding the implementation.
 func gol(in <-chan interface{}, hubChan chan<- interface{}) {
 	grid, diff := &Grid{}, make(Diff)
+
+	// isEmptyDiffSent is true if the grid has stopped evolving (because it is
+	// empty or consists entirely of still lifes), and we have broadcasted a
+	// single empty diff to indicate that the stream of messages has ended.
+	isEmptyDiffSent := false
 
 	// We could handle one Merge message and an arbitrary number of
 	// InitListener messages concurrently. But for simplicity of implementation
@@ -141,15 +146,30 @@ func gol(in <-chan interface{}, hubChan chan<- interface{}) {
 		case *Merge:
 			merge(m.diff, diff)
 		case *InitListener:
-			message, _ := json.Marshal(grid)
-			hubChan <- &Forward{m.li, message}
+			gridMessage, _ := json.Marshal(grid)
+			hubChan <- &Forward{m.li, gridMessage}
+			if isEmptyDiffSent {
+				// Send the empty diff to this new Listener as well.
+				emptyDiffMessage, _ := json.Marshal(diff)
+				hubChan <- &Forward{m.li, emptyDiffMessage}
+			}
 		case *Tick:
 			if len(diff) != 0 {
 				message, _ := json.Marshal(diff)
 				hubChan <- &Broadcast{message}
 				flush(diff, grid)
+				nextState(grid, diff)
+				isEmptyDiffSent = false
+			} else if !isEmptyDiffSent {
+				message, _ := json.Marshal(diff)
+				hubChan <- &Broadcast{message}
+				isEmptyDiffSent = true
 			}
-			nextState(grid, diff)
+			// Note: Using len(diff) to determine whether the grid has stopped
+			// evolving hinges on the assumption that it isn't possible to
+			// "cancel out" a diff via a Merge message. So care would need to
+			// be taken if we were to implement, e.g., a way for the client to
+			// erase grid cells.
 		}
 	}
 }
@@ -169,7 +189,7 @@ type Broadcast struct {
 	message []byte
 }
 
-// Forward a websocket message to a Specific listener
+// Forward a websocket message to a specific Listener
 type Forward struct {
 	li      *Listener
 	message []byte

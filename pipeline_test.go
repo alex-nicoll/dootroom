@@ -12,30 +12,14 @@ import (
 
 func Test_pipeline(t *testing.T) {
 	readPumpOut := make(chan interface{})
-	modelChan := make(chan interface{})
-	attachConn := startPipelineInternal(readPumpOut, modelChan)
-	newConn := func() (in chan []byte, out chan []byte, re Read, wr Write, cl Close) {
-		in = make(chan []byte)
-		out = make(chan []byte)
-		re = func() (messageType int, p []byte, err error) {
-			return 0, <-in, nil
-		}
-		wr = func(messageType int, data []byte) error {
-			out <- data
-			return nil
-		}
-		cl = func() error {
-			t.Errorf("Unexpected call to Close")
-			return nil
-		}
-		return
-	}
+	golChan := make(chan interface{})
+	attachConn := startPipelineInternal(readPumpOut, golChan)
 
 	// When a new connection is made, the pipeline should send the Game of Life
 	// state as JSON to that connection.
 
-	in1, out1, re1, wr1, cl1 := newConn()
-	in2, out2, re2, wr2, cl2 := newConn()
+	in1, out1, re1, wr1, cl1 := newConn(t)
+	in2, out2, re2, wr2, cl2 := newConn(t)
 
 	attachConn(re1, wr1, cl1)
 	attachConn(re2, wr2, cl2)
@@ -60,9 +44,9 @@ func Test_pipeline(t *testing.T) {
 
 	send(t, in1, []byte(diff1))
 	send(t, in2, []byte(diff2))
-	forward(t, modelChan, readPumpOut)
-	forward(t, modelChan, readPumpOut)
-	send[interface{}](t, modelChan, &Tick{})
+	forward(t, golChan, readPumpOut)
+	forward(t, golChan, readPumpOut)
+	send[interface{}](t, golChan, &Tick{})
 
 	json = string(recv(t, out1))
 	if json != combinedDiff {
@@ -78,7 +62,7 @@ func Test_pipeline(t *testing.T) {
 
 	diff := "{\"30\":{\"32\":\"#aaaaaa\"},\"31\":{\"31\":\"\"},\"32\":{\"32\":\"#aaaaaa\"}}"
 
-	send[interface{}](t, modelChan, &Tick{})
+	send[interface{}](t, golChan, &Tick{})
 
 	json = string(recv(t, out1))
 	if json != diff {
@@ -93,12 +77,95 @@ func Test_pipeline(t *testing.T) {
 	// state as JSON to that connection. Unlike in the previous test for adding
 	// new connections, there should now be non-empty cells in the GoL state.
 
-	_, out3, re3, wr3, cl3 := newConn()
+	_, out3, re3, wr3, cl3 := newConn(t)
 
 	attachConn(re3, wr3, cl3)
 
 	json = string(recv(t, out3))
 	if !strings.HasPrefix(json, "[") || !strings.Contains(json, "\"#aaaaaa\"") {
+		t.Errorf("Got incorrect JSON: %v", json)
+	}
+}
+
+func Test_pipelineEmptyDiff(t *testing.T) {
+	readPumpOut := make(chan interface{})
+	golChan := make(chan interface{})
+	attachConn := startPipelineInternal(readPumpOut, golChan)
+
+	in1, out1, re1, wr1, cl1 := newConn(t)
+	_, out2, re2, wr2, cl2 := newConn(t)
+
+	attachConn(re1, wr1, cl1)
+	attachConn(re2, wr2, cl2)
+
+	// Handle the GoL state initialization message
+	recv(t, out1)
+	recv(t, out2)
+
+	// When the Game of Life state stops changing, the pipeline should send
+	// an empty diff to each connection. We can check this by sending a diff
+	// containing a single live cell to the pipeline. For each connection, we
+	// then expect to see a single-cell life diff, single-cell death diff, and
+	// finally an empty diff.
+
+	diff := "{\"0\":{\"0\":\"#aaaaaa\"}}"
+
+	send(t, in1, []byte(diff))
+	forward(t, golChan, readPumpOut)
+	send[interface{}](t, golChan, &Tick{})
+	recv(t, out1)
+	recv(t, out2)
+	send[interface{}](t, golChan, &Tick{})
+	recv(t, out1)
+	recv(t, out2)
+	send[interface{}](t, golChan, &Tick{})
+
+	json := string(recv(t, out1))
+	if json != "{}" {
+		t.Errorf("Got incorrect JSON: %v", json)
+	}
+	json = string(recv(t, out2))
+	if json != "{}" {
+		t.Errorf("Got incorrect JSON: %v", json)
+	}
+
+	// After the pipeline sends an empty diff to each connection, it should
+	// send no further diffs until the state changes again. We can check this
+	// by sending the single-cell life diff again and verifying that it is the next
+	// diff received on each connection.
+
+	send(t, in1, []byte(diff))
+	forward(t, golChan, readPumpOut)
+	send[interface{}](t, golChan, &Tick{})
+
+	json = string(recv(t, out1))
+	if json != diff {
+		t.Errorf("Got incorrect JSON: %v", json)
+	}
+	json = string(recv(t, out2))
+	if json != diff {
+		t.Errorf("Got incorrect JSON: %v", json)
+	}
+
+	// Clean up; receive the single-cell death diff and the empty diff.
+	send[interface{}](t, golChan, &Tick{})
+	recv(t, out1)
+	recv(t, out2)
+	send[interface{}](t, golChan, &Tick{})
+	recv(t, out1)
+	recv(t, out2)
+
+	// After the the pipeline sends an empty diff to each connection, when a
+	// new connection is made, the pipeline should send the empty diff to that
+	// connection.
+
+	_, out3, re3, wr3, cl3 := newConn(t)
+	attachConn(re3, wr3, cl3)
+	// Handle the GoL state initialization message
+	recv(t, out3)
+
+	json = string(recv(t, out3))
+	if json != "{}" {
 		t.Errorf("Got incorrect JSON: %v", json)
 	}
 }
@@ -305,6 +372,23 @@ func Test_leak(t *testing.T) {
 	errSig.Close(errors.New("dummy error"))
 
 	wg.Wait()
+}
+
+func newConn(t *testing.T) (in chan []byte, out chan []byte, re Read, wr Write, cl Close) {
+	in = make(chan []byte)
+	out = make(chan []byte)
+	re = func() (messageType int, p []byte, err error) {
+		return 0, <-in, nil
+	}
+	wr = func(messageType int, data []byte) error {
+		out <- data
+		return nil
+	}
+	cl = func() error {
+		t.Errorf("Unexpected call to Close")
+		return nil
+	}
+	return
 }
 
 // invalidMessageTestTemplate starts a pipeline with one connection, simulates

@@ -18,6 +18,7 @@
   --controls-height: 70px;
   --controls-btn-height: calc(.8 * var(--controls-height));
   --view-height: calc(100% - var(--header-height) - var(--controls-height));
+  --scale: 1;
 }
 
 html, body {
@@ -80,21 +81,21 @@ body {
 
 #board, #overlay_cells {
   display: grid;
-  grid-auto-rows: 18px;
-  grid-auto-columns: 18px;
+  grid-auto-rows: calc(var(--scale) * 18px);
+  grid-auto-columns: calc(var(--scale) * 18px);
 }
 
 .board_cell_empty {
   background-color: lightgray;
-  border: 1.125px solid silver;
+  border: calc(var(--scale) * 1.125px) solid silver;
 }
 
 .board_cell_filled {
-  border: 2.25px outset silver;
+  border: calc(var(--scale) * 2.25px) outset silver;
 }
 
 .overlay_cell_filled {
-  border: 2.25px inset silver;
+  border: calc(var(--scale) * 2.25px) inset silver;
 }
 
 #controls {

@@ -3,10 +3,8 @@
 - Consider making move button a toggle composed of two buttons stitched together: left side crossed arrows, right side pencil
 - Disable caching
 - Max clients
-- Handle server sending updates faster than UI can render them.
-  - Have client ask for another init when too many diffs are buffered.
-  - Profile and speed up rendering.
-- Try using SVG or canvas instead of divs 
+- Try using canvas instead of divs to speed up rendering
+- Try updating only the visible portion of the board to speed up rendering
 - On init, server can send just the live cells, rather than the whole grid, so long as the client can distinguish between an init and a diff.
 - Write test for client side code (input: ws; output: document)
 - Generate server and client code so that the grid dimensions are defined in one place
@@ -20,8 +18,11 @@
 
 Features:
 
-- Zoom +/- buttons
+- Zoom +/- buttons. Change layout of controls to [move, zoom-, zoom+, submit], with a caret to expand controls upward, showing species.
 - A way to clear debris (eraser, reset button, automatic, ...)
+- Fancier cells: rounded, small when empty, large when filled. Potentially animate transitions.
+- Nicer font and color palette
+- Change state of / animate submit button when board is dirty
 - Gene mixing and mutating
 - Move controls to the right side of the screen in landscape mode
 - Panning with arrow keys
