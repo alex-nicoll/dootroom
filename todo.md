@@ -1,12 +1,13 @@
-- Refactor js to reduce scope of variables
 - Make panning with the mouse smoother
 - Consider making move button a toggle composed of two buttons stitched together: left side crossed arrows, right side pencil
 - Disable caching
 - Max clients
 - Try using canvas instead of divs to speed up rendering
 - Try updating only the visible portion of the board to speed up rendering
+- On Chrome, if the page loads in the background, we get an error reading property "close" of undefined. This is because the transition to visibility state "hidden" and corresponding call to protocol.ws.disconnect happens before the WebSocket is created via the delayed call to protocol.ws.connect in init().
 - On init, server can send just the live cells, rather than the whole grid, so long as the client can distinguish between an init and a diff.
-- Write test for client side code (input: ws; output: document)
+- Automate testing of client-side code
+- Transpile JS to support older browsers
 - Generate server and client code so that the grid dimensions are defined in one place
 - Do the tests leak goroutines?
 - Pick appropriate WebSocket buffer sizes to pass to Upgrader. See Gorilla WebSocket documentation.
