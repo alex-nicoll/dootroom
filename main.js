@@ -1,4 +1,4 @@
-// This script should be included as a module so that it is run after the HTML
+// This script should be included as a module so that it runs after the HTML
 // document has been loaded and parsed. It adds additional elements to the
 // document, sets up event handlers, and sets up the WebSocket connection.
 //
@@ -511,8 +511,6 @@ function initView(view) {
   document.addEventListener("mouseup", (e) => {
     isDraggingView = false;
   });
-
-  return view;
 }
 
 // initModeSwitch allows switching between pan mode and draw/erase mode.
