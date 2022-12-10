@@ -9,19 +9,19 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// Read decouples the application from Conn.ReadMessage for testing purposes.
+// Read decouples the application from websocket.Conn.ReadMessage for testing purposes.
 type Read = func() (messageType int, p []byte, err error)
 
-// Write decouples the application from Conn.WriteMessage for testing purposes.
+// Write decouples the application from websocket.Conn.WriteMessage for testing purposes.
 type Write = func(messageType int, data []byte) error
 
-// Close decouples the application from Conn.Close for testing purposes.
+// Close decouples the application from websocket.Conn.Close for testing purposes.
 type Close = func() error
 
 const SendBufferLen = 256
 
 // startPipeline runs clock, gol, and hub in separate goroutines and connects them in
-// order via channels.  It returns a function that runs readPump in a goroutine
+// order via channels. It returns a function that runs readPump in a goroutine
 // that sends messages to gol, and runs writePump in a goroutine that receives
 // messages from hub.
 func startPipeline() func(Read, Write, Close) (*sync.WaitGroup, *ErrorSignal) {
