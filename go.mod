@@ -1,4 +1,4 @@
-module mgol.com/main
+module github.com/alex-nicoll/multi-life
 
 go 1.18
 
