@@ -20,74 +20,93 @@ type closeConn = func() error
 
 const sendBufferLen = 256
 
-// startPipeline runs clock, gol, and hub in separate goroutines and connects
-// them in order via channels. It returns a function that runs readPump in a
-// goroutine that sends messages to gol, and runs writePump in a goroutine that
-// receives messages from hub.
-func startPipeline() func(readFromConn, writeToConn, closeConn) (*sync.WaitGroup, *errorSignal) {
-	golChan := make(chan interface{})
-	attachConn := startPipelineInternal(golChan, golChan)
-	go clock(golChan)
-	return attachConn
+type pipeline struct {
+	readPumpOut chan interface{}
+	golChan     chan interface{}
+	hubChan     chan interface{}
 }
 
-// Internal implementation of startPipeline exposed for testing purposes. This
+// startPipeline runs clock, gol, and hub in separate goroutines and connects
+// them in that order via channels.
+func startPipeline() *pipeline {
+	golChan := make(chan interface{})
+	pl := startPipelineInternal(golChan, golChan)
+	go clock(golChan)
+	return pl
+}
+
+// Internal implementation of startPipeline exposed for testing purposes. It
 // allows an additional stage to be added between readPump and gol, and omits
 // clock so that tests can control gol via tick messages.
-func startPipelineInternal(readPumpOut chan interface{}, golChan chan interface{}) func(readFromConn, writeToConn, closeConn) (*sync.WaitGroup, *errorSignal) {
+func startPipelineInternal(readPumpOut chan interface{}, golChan chan interface{}) *pipeline {
 	hubChan := make(chan interface{})
-
 	go gol(golChan, hubChan)
 	go hub(hubChan)
+	return &pipeline{readPumpOut, golChan, hubChan}
 
-	return func(re readFromConn, wr writeToConn, cl closeConn) (*sync.WaitGroup, *errorSignal) {
-		// errorSignal for this connection
-		errSig := newErrorSignal()
-		// Channel of messages to send on this connection
-		sendChan := make(chan []byte, sendBufferLen)
+}
 
-		// Register this connection's send channel and errorSignal with the hub.
-		listener := &listener{sendChan, errSig}
-		hubChan <- &register{listener}
+// attachConn attaches a connection to a pipeline. It starts readPump in a
+// goroutine that sends messages to gol, and starts writePump in a goroutine
+// that receives messages from hub. It also causes initialization data to be
+// sent to the client. For testing purposes, attachConn returns the errorSignal
+// associated with the connection and a WaitGroup that can be used to wait for
+// writePump and readPump to stop.
+func attachConn(pl *pipeline, re readFromConn, wr writeToConn, cl closeConn) (*sync.WaitGroup, *errorSignal) {
+	// errorSignal for this connection
+	errSig := newErrorSignal()
+	// Channel of messages to send on this connection
+	sendChan := make(chan []byte, sendBufferLen)
 
-		// Tell gol to send down initialization data.
-		golChan <- &initListener{listener}
+	// Register this connection's send channel and errorSignal with the hub.
+	li := &listener{sendChan, errSig}
+	pl.hubChan <- &register{li}
 
-		handleErr := func(err error) {
-			log.Println(err)
-			if _, ok := err.(*bufferOverflowError); !ok {
-				// If this was not a buffer overflow detected by the hub, then we need
-				// to explicitly unregister.
-				hubChan <- &unregister{listener}
-			}
-			if !websocket.IsUnexpectedCloseError(err) {
-				// The error is not due to the client closing the connection. Attempt
-				// to send a close message. If this *was* a close error, then Gorilla
-				// Websocket's default close handler should have already sent a close
-				// message.
-				err := wr(websocket.CloseMessage, []byte{})
-				if err != nil {
-					log.Printf("Error sending close message: %v\n", err)
-				}
-			}
-			// Close the connection. This should cause readPump to stop if it
-			// hasn't already.
-			if err := cl(); err != nil {
-				log.Printf("Error closing connection: %v\n", err)
-			}
+	// Tell gol to send down initialization data.
+	pl.golChan <- &initListener{li}
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		errHan := &errorHandler{pl.hubChan, li, wr, cl}
+		writePump(errSig, errHan, sendChan, wr)
+	}()
+	go func() {
+		defer wg.Done()
+		readPump(errSig, re, pl.readPumpOut)
+	}()
+	return &wg, errSig
+}
+
+type errorHandler struct {
+	hubChan chan interface{}
+	li      *listener
+	wr      writeToConn
+	cl      closeConn
+}
+
+func (errHan *errorHandler) run(err error) {
+	log.Println(err)
+	if _, ok := err.(*bufferOverflowError); !ok {
+		// If this was not a buffer overflow detected by the hub, then we need
+		// to explicitly unregister.
+		errHan.hubChan <- &unregister{errHan.li}
+	}
+	if !websocket.IsUnexpectedCloseError(err) {
+		// The error is not due to the client closing the connection. Attempt
+		// to send a close message. If this *was* a close error, then Gorilla
+		// Websocket's default close handler should have already sent a close
+		// message.
+		err := errHan.wr(websocket.CloseMessage, []byte{})
+		if err != nil {
+			log.Printf("Error sending close message: %v\n", err)
 		}
-
-		var wg sync.WaitGroup
-		wg.Add(2)
-		go func() {
-			defer wg.Done()
-			writePump(errSig, handleErr, sendChan, wr)
-		}()
-		go func() {
-			defer wg.Done()
-			readPump(errSig, re, readPumpOut)
-		}()
-		return &wg, errSig
+	}
+	// Close the connection. This should cause readPump to stop if it
+	// hasn't already.
+	if err := errHan.cl(); err != nil {
+		log.Printf("Error closing connection: %v\n", err)
 	}
 }
 
@@ -230,15 +249,15 @@ func hub(in <-chan interface{}) {
 
 // writePump runs a loop that copies a message from sendChan to the connection,
 // or executes error handling when a connection-specific error is detected.
-func writePump(errSig *errorSignal, handleErr func(error), sendChan <-chan []byte, write writeToConn) {
+func writePump(errSig *errorSignal, errHan *errorHandler, sendChan <-chan []byte, write writeToConn) {
 	for {
 		select {
 		case <-errSig.signal():
-			handleErr(errSig.err())
+			errHan.run(errSig.err())
 			return
 		case message := <-sendChan:
 			if err := write(websocket.BinaryMessage, message); err != nil {
-				handleErr(err)
+				errHan.run(err)
 				return
 			}
 		}

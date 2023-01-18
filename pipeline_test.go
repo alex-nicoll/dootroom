@@ -13,7 +13,7 @@ import (
 func Test_pipeline(t *testing.T) {
 	readPumpOut := make(chan interface{})
 	golChan := make(chan interface{})
-	attachConn := startPipelineInternal(readPumpOut, golChan)
+	pl := startPipelineInternal(readPumpOut, golChan)
 
 	// When a new connection is made, the pipeline should send the Game of Life
 	// state as JSON to that connection.
@@ -21,8 +21,8 @@ func Test_pipeline(t *testing.T) {
 	in1, out1, re1, wr1, cl1 := newConn(t)
 	in2, out2, re2, wr2, cl2 := newConn(t)
 
-	attachConn(re1, wr1, cl1)
-	attachConn(re2, wr2, cl2)
+	attachConn(pl, re1, wr1, cl1)
+	attachConn(pl, re2, wr2, cl2)
 
 	json := string(recv(t, out1))
 	if !strings.HasPrefix(json, "[") {
@@ -79,7 +79,7 @@ func Test_pipeline(t *testing.T) {
 
 	_, out3, re3, wr3, cl3 := newConn(t)
 
-	attachConn(re3, wr3, cl3)
+	attachConn(pl, re3, wr3, cl3)
 
 	json = string(recv(t, out3))
 	if !strings.HasPrefix(json, "[") || !strings.Contains(json, "\"#aaaaaa\"") {
@@ -90,13 +90,13 @@ func Test_pipeline(t *testing.T) {
 func Test_pipelineEmptyDiff(t *testing.T) {
 	readPumpOut := make(chan interface{})
 	golChan := make(chan interface{})
-	attachConn := startPipelineInternal(readPumpOut, golChan)
+	pl := startPipelineInternal(readPumpOut, golChan)
 
 	in1, out1, re1, wr1, cl1 := newConn(t)
 	_, out2, re2, wr2, cl2 := newConn(t)
 
-	attachConn(re1, wr1, cl1)
-	attachConn(re2, wr2, cl2)
+	attachConn(pl, re1, wr1, cl1)
+	attachConn(pl, re2, wr2, cl2)
 
 	// Handle the GoL state initialization message
 	recv(t, out1)
@@ -160,7 +160,7 @@ func Test_pipelineEmptyDiff(t *testing.T) {
 	// connection.
 
 	_, out3, re3, wr3, cl3 := newConn(t)
-	attachConn(re3, wr3, cl3)
+	attachConn(pl, re3, wr3, cl3)
 	// Handle the GoL state initialization message
 	recv(t, out3)
 
@@ -250,11 +250,12 @@ func Test_invalidDiff10(t *testing.T) {
 // client closing the connection, a close message should be sent and then the
 // connection should be closed.
 func Test_errorReadingMessage(t *testing.T) {
-	attachConn := startPipeline()
+	pl := startPipeline()
 	in := make(chan error)
 	out := make(chan int)
 	closed := make(chan struct{})
 	attachConn(
+		pl,
 		newReadErrorFn(in, closed),
 		newWriteMessageTypeFn(out),
 		newCloseFn(closed),
@@ -271,11 +272,12 @@ func Test_errorReadingMessage(t *testing.T) {
 // the connection, the connection should be closed and no close message should
 // be sent.
 func Test_errorReadingMessageClosedByClient(t *testing.T) {
-	attachConn := startPipeline()
+	pl := startPipeline()
 	in := make(chan error)
 	out := make(chan struct{})
 	closed := make(chan struct{})
 	attachConn(
+		pl,
 		newReadErrorFn(in, closed),
 		func(messageType int, data []byte) error {
 			out <- struct{}{}
@@ -299,9 +301,10 @@ func Test_errorReadingMessageClosedByClient(t *testing.T) {
 // When writing to the connection returns an error, the connection should be
 // closed.
 func Test_errorWritingMessage(t *testing.T) {
-	attachConn := startPipeline()
+	pl := startPipeline()
 	closed := make(chan struct{})
 	attachConn(
+		pl,
 		newReadUntilClosedFn(closed),
 		func(messageType int, data []byte) error {
 			return errors.New("dummy error")
@@ -320,11 +323,12 @@ func Test_errorWritingMessage(t *testing.T) {
 func Test_sendBufferOverflow(t *testing.T) {
 	readPumpOut := make(chan interface{})
 	modelChan := make(chan interface{})
-	attachConn := startPipelineInternal(readPumpOut, modelChan)
+	pl := startPipelineInternal(readPumpOut, modelChan)
 	in := make(chan []byte)
 	out := make(chan int)
 	closed := make(chan struct{})
 	_, errSig := attachConn(
+		pl,
 		newReadPayloadFn(in, closed),
 		newWriteMessageTypeFn(out),
 		newCloseFn(closed),
@@ -359,9 +363,10 @@ func Test_sendBufferOverflow(t *testing.T) {
 // When an error occurs related to a connection and resources are cleaned up,
 // no goroutines should be leaked.
 func Test_leak(t *testing.T) {
-	attachConn := startPipeline()
+	pl := startPipeline()
 	closed := make(chan struct{})
 	wg, errSig := attachConn(
+		pl,
 		newReadUntilClosedFn(closed),
 		func(messageType int, data []byte) error {
 			return nil
@@ -395,11 +400,12 @@ func newConn(t *testing.T) (in chan []byte, out chan []byte, re readFromConn, wr
 // the message coming in on the connection, then verifies that a close message
 // was sent on the connection and the connection was closed.
 func invalidMessageTestTemplate(t *testing.T, message []byte) {
-	attachConn := startPipeline()
+	pl := startPipeline()
 	in := make(chan []byte)
 	out := make(chan int)
 	closed := make(chan struct{})
 	attachConn(
+		pl,
 		newReadPayloadFn(in, closed),
 		newWriteMessageTypeFn(out),
 		newCloseFn(closed),
