@@ -25,10 +25,9 @@ The following additional steps are needed to develop the project.
 
 1. Install the third-party static analysis tools.
 ```
-go install \
-  github.com/mgechev/revive@latest \
-  honnef.co/go/tools/cmd/staticcheck@latest \  
-  github.com/kisielk/errcheck@latest
+go install github.com/mgechev/revive@latest && \
+go install honnef.co/go/tools/cmd/staticcheck@latest && \
+go install github.com/kisielk/errcheck@latest
 ```
 2. After making changes, use the `run` script to run static analysis, tests, and finally the application itself. The port number is optional and is 8080 by default.
 ```
