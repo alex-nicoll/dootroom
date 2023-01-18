@@ -1,12 +1,12 @@
 package main
 
-type BufferOverflowError struct{}
+type bufferOverflowError struct{}
 
-func (err *BufferOverflowError) Error() string {
+func (err *bufferOverflowError) Error() string {
 	return "Listener's buffer overflowed."
 }
 
-type Listener struct {
+type listener struct {
 	sendChan chan<- []byte
-	errSig   *ErrorSignal
+	errSig   *errorSignal
 }

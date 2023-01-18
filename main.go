@@ -1,3 +1,5 @@
+// Command multi-life runs a multiplayer Conway's Game of Life server.
+// See README.md for installation and usage instructions.
 package main
 
 import (

@@ -6,27 +6,27 @@ import (
 	"regexp"
 )
 
-var hexColorCode *regexp.Regexp = regexp.MustCompile("\\A#[0-9a-f]{6}\\z")
+var hexColorCode = regexp.MustCompile(`\A#[0-9a-f]{6}\z`)
 
-func validateDiff(diff Diff) error {
-	if len(diff) == 0 {
-		return errors.New("Diff is empty.")
+func validateDiff(df diff) error {
+	if len(df) == 0 {
+		return errors.New("diff is empty")
 	}
-	for x := range diff {
-		if x >= GridDimX {
-			return errors.New("Diff exceeds grid's X dimension.")
+	for x := range df {
+		if x >= gridDimX {
+			return errors.New("diff exceeds grid's X dimension")
 		}
-		ydiff := diff[x]
+		ydiff := df[x]
 		if len(ydiff) == 0 {
-			return errors.New("Diff includes an X coordinate with no Y coordinate.")
+			return errors.New("diff includes an X coordinate with no Y coordinate")
 		}
 		for y, v := range ydiff {
-			if y >= GridDimY {
-				return errors.New("Diff exceeds grid's Y dimension.")
+			if y >= gridDimY {
+				return errors.New("diff exceeds grid's Y dimension")
 			}
 			if !hexColorCode.MatchString(v) {
-				return errors.New(fmt.Sprintf("Diff contains a cell value that is "+
-					"not a hexadecimal color code. (%v)", v))
+				return fmt.Errorf("diff contains a cell value that is not a "+
+					"hexadecimal color code (%v)", v)
 			}
 		}
 	}

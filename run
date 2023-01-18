@@ -1,16 +1,49 @@
 #!/bin/bash
-echo 'Running tests...'
-go test
-if [[ $? != 0 ]]
-then
-  exit $?
+
+# gofmt has doesn't have non-zero exit status when there is unformatted code,
+# so we need to test whether the standard output is a non-empty string.
+CMD='gofmt -l .'
+echo $CMD
+if test $($CMD); then
+  echo 'Code is not correctly formatted. Please run go fmt.'
+  exit 1
 fi
+
+CMD='go vet'
+echo $CMD
+if ! $CMD; then
+  exit 1
+fi
+
+CMD='revive -set_exit_status'
+echo $CMD
+if ! $CMD; then
+  exit 1
+fi
+
+CMD='staticcheck'
+echo $CMD
+if ! $CMD; then
+  exit 1
+fi
+
+CMD='errcheck'
+echo $CMD
+if ! $CMD; then
+  exit 1
+fi
+
+CMD='go test'
+echo $CMD
+if ! $CMD; then
+  exit 1
+fi
+
 port=$1
-if [[ $port == '' ]]
-then
+if [[ $port == '' ]]; then
   port=8080
 fi
+
 logfile='mgol.log'
-echo "Running server at port $port"
+echo "Running server at port $port, and logging output to '$logfile'"
 go run . $port >> $logfile 2>&1
-echo "Server stopped. View the output log '$logfile' for details."

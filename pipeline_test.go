@@ -44,9 +44,9 @@ func Test_pipeline(t *testing.T) {
 
 	send(t, in1, []byte(diff1))
 	send(t, in2, []byte(diff2))
-	forward(t, golChan, readPumpOut)
-	forward(t, golChan, readPumpOut)
-	send[interface{}](t, golChan, &Tick{})
+	fwd(t, golChan, readPumpOut)
+	fwd(t, golChan, readPumpOut)
+	send[interface{}](t, golChan, &tick{})
 
 	json = string(recv(t, out1))
 	if json != combinedDiff {
@@ -60,16 +60,16 @@ func Test_pipeline(t *testing.T) {
 	// When a tick occurs, the pipeline should send the diff between the
 	// current state and the previous state to each connection.
 
-	diff := "{\"30\":{\"32\":\"#aaaaaa\"},\"31\":{\"31\":\"\"},\"32\":{\"32\":\"#aaaaaa\"}}"
+	df := "{\"30\":{\"32\":\"#aaaaaa\"},\"31\":{\"31\":\"\"},\"32\":{\"32\":\"#aaaaaa\"}}"
 
-	send[interface{}](t, golChan, &Tick{})
+	send[interface{}](t, golChan, &tick{})
 
 	json = string(recv(t, out1))
-	if json != diff {
+	if json != df {
 		t.Errorf("Got incorrect JSON: %v", json)
 	}
 	json = string(recv(t, out2))
-	if json != diff {
+	if json != df {
 		t.Errorf("Got incorrect JSON: %v", json)
 	}
 
@@ -108,17 +108,17 @@ func Test_pipelineEmptyDiff(t *testing.T) {
 	// then expect to see a single-cell life diff, single-cell death diff, and
 	// finally an empty diff.
 
-	diff := "{\"0\":{\"0\":\"#aaaaaa\"}}"
+	df := "{\"0\":{\"0\":\"#aaaaaa\"}}"
 
-	send(t, in1, []byte(diff))
-	forward(t, golChan, readPumpOut)
-	send[interface{}](t, golChan, &Tick{})
+	send(t, in1, []byte(df))
+	fwd(t, golChan, readPumpOut)
+	send[interface{}](t, golChan, &tick{})
 	recv(t, out1)
 	recv(t, out2)
-	send[interface{}](t, golChan, &Tick{})
+	send[interface{}](t, golChan, &tick{})
 	recv(t, out1)
 	recv(t, out2)
-	send[interface{}](t, golChan, &Tick{})
+	send[interface{}](t, golChan, &tick{})
 
 	json := string(recv(t, out1))
 	if json != "{}" {
@@ -134,24 +134,24 @@ func Test_pipelineEmptyDiff(t *testing.T) {
 	// by sending the single-cell life diff again and verifying that it is the next
 	// diff received on each connection.
 
-	send(t, in1, []byte(diff))
-	forward(t, golChan, readPumpOut)
-	send[interface{}](t, golChan, &Tick{})
+	send(t, in1, []byte(df))
+	fwd(t, golChan, readPumpOut)
+	send[interface{}](t, golChan, &tick{})
 
 	json = string(recv(t, out1))
-	if json != diff {
+	if json != df {
 		t.Errorf("Got incorrect JSON: %v", json)
 	}
 	json = string(recv(t, out2))
-	if json != diff {
+	if json != df {
 		t.Errorf("Got incorrect JSON: %v", json)
 	}
 
 	// Clean up; receive the single-cell death diff and the empty diff.
-	send[interface{}](t, golChan, &Tick{})
+	send[interface{}](t, golChan, &tick{})
 	recv(t, out1)
 	recv(t, out2)
-	send[interface{}](t, golChan, &Tick{})
+	send[interface{}](t, golChan, &tick{})
 	recv(t, out1)
 	recv(t, out2)
 
@@ -194,7 +194,7 @@ func Test_invalidDiff2(t *testing.T) {
 // connection, a close message should be sent on the connection and then the
 // connection should be closed.
 func Test_invalidDiff3(t *testing.T) {
-	invalidMessageTestTemplate(t, []byte(fmt.Sprintf("{\"0\":{\"%v\":\"#aaaaaa\"}}", GridDimY)))
+	invalidMessageTestTemplate(t, []byte(fmt.Sprintf("{\"0\":{\"%v\":\"#aaaaaa\"}}", gridDimY)))
 }
 
 // When valid JSON that is not a valid Game of Life diff comes in on a
@@ -333,16 +333,16 @@ func Test_sendBufferOverflow(t *testing.T) {
 	// This automaton runs forever, alternating between two states. This allows
 	// us to produce an arbitrary number of outgoing messages.
 	send(t, in, []byte("{\"20\":{\"20\":\"#aaaaaa\",\"21\":\"#aaaaaa\",\"22\":\"#aaaaaa\"}}"))
-	forward(t, modelChan, readPumpOut)
+	fwd(t, modelChan, readPumpOut)
 	// Produce SendBufferLen+1 Ticks in order to overflow the send buffer.
 	// writePump should currently be blocked trying to write the GoL state
 	// initialization message to the connection, so no messages should be
 	// pulled out of the send buffer.
-	for i := 1; i <= SendBufferLen+1; i++ {
-		send[interface{}](t, modelChan, &Tick{})
+	for i := 1; i <= sendBufferLen+1; i++ {
+		send[interface{}](t, modelChan, &tick{})
 	}
 	// Wait for the buffer to overflow.
-	recv(t, errSig.Done())
+	recv(t, errSig.signal())
 
 	// Unblock writePump. It may send some messages before sending the close
 	// message because it randomly chooses whether to pull a message out of
@@ -369,12 +369,12 @@ func Test_leak(t *testing.T) {
 		newCloseFn(closed),
 	)
 
-	errSig.Close(errors.New("dummy error"))
+	errSig.send(errors.New("dummy error"))
 
 	wg.Wait()
 }
 
-func newConn(t *testing.T) (in chan []byte, out chan []byte, re Read, wr Write, cl Close) {
+func newConn(t *testing.T) (in chan []byte, out chan []byte, re readFromConn, wr writeToConn, cl closeConn) {
 	in = make(chan []byte)
 	out = make(chan []byte)
 	re = func() (messageType int, p []byte, err error) {
@@ -412,40 +412,40 @@ func invalidMessageTestTemplate(t *testing.T, message []byte) {
 	verifyCloseMsgSentAndConnClosed(t, out, closed)
 }
 
-func newReadPayloadFn(in chan []byte, closed chan struct{}) Read {
+func newReadPayloadFn(in chan []byte, closed chan struct{}) readFromConn {
 	return func() (messageType int, p []byte, err error) {
 		select {
 		case <-closed:
-			err = errors.New("Server closed the connection.")
+			err = errors.New("server closed the connection")
 		case p = <-in:
 		}
 		return
 	}
 }
 
-func newReadErrorFn(in chan error, closed chan struct{}) Read {
+func newReadErrorFn(in chan error, closed chan struct{}) readFromConn {
 	return func() (messageType int, p []byte, err error) {
 		err = <-in
 		return
 	}
 }
 
-func newReadUntilClosedFn(closed chan struct{}) Read {
+func newReadUntilClosedFn(closed chan struct{}) readFromConn {
 	return func() (messageType int, p []byte, err error) {
 		<-closed
-		err = errors.New("Server closed the connection.")
+		err = errors.New("server closed the connection")
 		return
 	}
 }
 
-func newWriteMessageTypeFn(out chan int) Write {
+func newWriteMessageTypeFn(out chan int) writeToConn {
 	return func(messageType int, data []byte) error {
 		out <- messageType
 		return nil
 	}
 }
 
-func newCloseFn(closed chan struct{}) Close {
+func newCloseFn(closed chan struct{}) closeConn {
 	return func() error {
 		close(closed)
 		return nil
@@ -479,11 +479,10 @@ func send[U any](t *testing.T, ch chan<- U, v U) {
 		t.Errorf("Channel send operation timed out")
 	case ch <- v:
 	}
-	return
 }
 
-// forward copies a value from chOut to chIn, with a timeout for each channel
+// fwd copies a value from chOut to chIn, with a timeout for each channel
 // operation.
-func forward[U any](t *testing.T, chIn chan<- U, chOut <-chan U) {
+func fwd[U any](t *testing.T, chIn chan<- U, chOut <-chan U) {
 	send(t, chIn, recv(t, chOut))
 }
