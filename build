@@ -39,11 +39,13 @@ if ! $CMD; then
   exit 1
 fi
 
-port=$1
-if [[ $port == '' ]]; then
-  port=8080
+outfile=$1
+if [[ $outfile == '' ]]; then
+  outfile=server
 fi
 
-logfile='mgol.log'
-echo "Running server at port $port, and logging output to '$logfile'"
-go run . $port >> $logfile 2>&1
+CMD="go build -o $outfile ."
+echo $CMD
+if ! $CMD; then
+  exit 1
+fi

@@ -6,30 +6,19 @@ Conway's Game of Life implemented as a chaotic multiplayer game. Clients share a
 
 ## Installation
 
-1. Install [Go](https://go.dev/doc/install).
+1. Install [Docker Engine](https://docs.docker.com/engine/). If installing on Windows, use the WSL 2 backend.
 
 2. Clone the repository.
 ```
 git clone git@github.com:alex-nicoll/multi-life.git
 ```
-3. `cd` into the repository's root directory and invoke `go run . <port_number>`, specifying the port on which you would like the server to run. E.g.:
+3. `cd` into the repository's root directory and run `docker build` as shown below. This will build the application's Go backend from source inside a container, and output an executable named `server`.
 ```
 cd multi-life
-go run . 8080
+DOCKER_BUILDKIT=1 docker build . --output .
 ```
-The server should now be running at http://localhost:8080 (or whichever port you specified).
-
-## Development
-
-The following additional steps are needed to develop the project.
-
-1. Install the third-party static analysis tools.
+4. Run `server`, specifying a port number to listen on.
 ```
-go install github.com/mgechev/revive@latest && \
-go install honnef.co/go/tools/cmd/staticcheck@latest && \
-go install github.com/kisielk/errcheck@latest
+./server 8080
 ```
-2. After making changes, use the `run` script to run static analysis, tests, and finally the application itself. The port number is optional and is 8080 by default.
-```
-./run <port_number>
-```
+The application should now be running at http://localhost:8080 (or whichever port you specified).
