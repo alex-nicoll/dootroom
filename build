@@ -1,12 +1,18 @@
 #!/bin/bash
 
-# gofmt has doesn't have non-zero exit status when there is unformatted code,
-# so we need to test whether the standard output is a non-empty string.
+# gofmt has exit status 0 when there is unformatted code, so we need to test
+# whether the standard output is a non-empty string.
 CMD='gofmt -l .'
 echo $CMD
-if test $($CMD); then
-  echo 'Code is not correctly formatted. Please run go fmt.'
+output=$($CMD)
+exit_status=$?
+if test $output; then
+  echo -e 'The files below are not correctly formatted.' \
+    "Please run go fmt.\n$output"
   exit 1
+fi
+if [[ $exit_status != 0 ]]; then
+  exit $exit_status
 fi
 
 CMD='go vet'
