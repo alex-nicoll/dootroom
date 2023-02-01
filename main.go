@@ -19,7 +19,7 @@ func main() {
 	pl := startPipeline()
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if !websocket.IsWebSocketUpgrade(r) {
-			http.ServeFile(w, r, "./main.html")
+			serveFileNoCache(w, r, "./main.html")
 			return
 		}
 		conn, err := upgrader.Upgrade(w, r, nil)
@@ -42,13 +42,24 @@ func main() {
 		)
 	})
 	http.HandleFunc("/main.js", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./main.js")
+		serveFileNoCache(w, r, "./main.js")
 	})
 	http.HandleFunc("/main.css", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./main.css")
+		serveFileNoCache(w, r, "./main.css")
 	})
 	http.HandleFunc("/beehive_oscillator.png", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./beehive_oscillator.png")
+		serveFileNoCache(w, r, "./beehive_oscillator.png")
 	})
 	log.Fatal(http.ListenAndServe(":"+os.Args[1], nil))
+}
+
+// serveFileNoCache serves a file and directs the client to always request the
+// most up-to-date version.
+func serveFileNoCache(w http.ResponseWriter, r *http.Request, name string) {
+	// "no-store" prevents clients from storing the response. A more efficient
+	// but complicated approach would be to allow clients to store the
+	// response, but have them check that it's up-to-date before using it. See
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching#force_revalidation
+	w.Header()["Cache-Control"] = []string{"no-store"}
+	http.ServeFile(w, r, name)
 }
