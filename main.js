@@ -49,11 +49,9 @@ function init() {
   // is the species used to fill that cell.
   const filledOverlayCells = new Map();
 
-  const {fill, empty, flush} = newEditor(species, filledOverlayCells);
-  const drawOrErase = newDrawOrErase(fill, empty);
-  const mouseDraw = newMouseDraw(overlayCells, fill, empty, drawOrErase);
-  const touchDraw = newTouchDraw(overlayCells, drawOrErase);
-  const tapDraw = newTapDraw(overlayCells, fill, empty);
+  const mouseDraw = newMouseDraw(overlayCells, filledOverlayCells, species);
+  const touchDraw = newTouchDraw(overlayCells, filledOverlayCells, species);
+  const tapDraw = newTapDraw(overlayCells, filledOverlayCells, species);
 
   const view = document.getElementById("view");
   initView(view);
@@ -61,7 +59,7 @@ function init() {
 
   initModeSwitch(iconButtons, mouseDraw, touchDraw, tapDraw, mousePan);
 
-  const protocol = newProtocol(filledOverlayCells, flush);
+  const protocol = newProtocol(filledOverlayCells);
 
   // Allow submitting via the submit button.
   iconButtons.namedItem("submit").addEventListener("click", protocol.ws.submit);
@@ -79,79 +77,66 @@ function init() {
   setTimeout(protocol.ws.connect, 0);
 }
 
-// Editor supports filling, emptying, and flushing the overlay cells (div
-// elements). Flushing means emptying all of the filled overlay cells and
-// converting them to a diff to submit to the server.
-function newEditor(species, filledOverlayCells) {
-
-  function fill(cell) {
-    cell.className = "overlay_cell_filled";
-    cell.style.backgroundColor = species.value;
-    // Store the species along with the cell, to be sent to the server later. We
-    // won't be able to use the value of style.backgroundColor, because it may be
-    // converted from hexadecimal to something else (e.g., an RGB string),
-    // whereas the server accepts only hexadecimal strings.
-    filledOverlayCells.set(cell, species.value);
-  }
-
-  return { fill, ...newEmptyAndFlush(filledOverlayCells) };
+function fill(filledOverlayCells, cell, species) {
+  cell.className = "overlay_cell_filled";
+  cell.style.backgroundColor = species.value;
+  // Store the species along with the cell, to be sent to the server later. We
+  // won't be able to use the value of style.backgroundColor, because it may be
+  // converted from hexadecimal to something else (e.g., an RGB string),
+  // whereas the server accepts only hexadecimal strings.
+  filledOverlayCells.set(cell, species.value);
 }
 
-function newEmptyAndFlush(filledOverlayCells) {
-
-  function empty(cell) {
-    cell.className = "";
-    cell.style.backgroundColor = "";
-    filledOverlayCells.delete(cell);
-  }
-
-  function flush() {
-    const diff = {};
-    filledOverlayCells.forEach((species, cell) => {
-      const x_ysuffix = cell.id.split(",");
-      const x = x_ysuffix[0];
-      const y = x_ysuffix[1].split("-overlay")[0];
-      if (diff[x] === undefined) {
-        diff[x] = {};
-      }
-      diff[x][y] = species;
-
-      empty(cell);
-    });
-    return diff;
-  }
-
-  return { empty, flush };
+function empty(filledOverlayCells, cell) {
+  cell.className = "";
+  cell.style.backgroundColor = "";
+  filledOverlayCells.delete(cell);
 }
 
-function newDrawOrErase(fill, empty) {
-  return function(drawState, cell) {
-    if (drawState === "drawing" && cell.className === "") {
-      fill(cell);
-    } else if (drawState === "erasing" && cell.className === "overlay_cell_filled") {
-      empty(cell);
+// Flush empties all of the filled overlay cells and converts them to a diff to
+// submit to the server.
+function flush(filledOverlayCells) {
+  const diff = {};
+  filledOverlayCells.forEach((species, cell) => {
+    const x_ysuffix = cell.id.split(",");
+    const x = x_ysuffix[0];
+    const y = x_ysuffix[1].split("-overlay")[0];
+    if (diff[x] === undefined) {
+      diff[x] = {};
     }
+    diff[x][y] = species;
+
+    empty(filledOverlayCells, cell);
+  });
+  return diff;
+}
+
+function drawOrErase(drawState, filledOverlayCells, cell, species) {
+  if (drawState === "drawing" && cell.className === "") {
+    fill(filledOverlayCells, cell, species);
+  } else if (drawState === "erasing" && cell.className === "overlay_cell_filled") {
+    empty(filledOverlayCells, cell);
   }
 }
 
 // MouseDraw allows drawing and erasing by clicking or dragging with a mouse.
-function newMouseDraw(overlayCells, fill, empty, drawOrErase) {
+function newMouseDraw(overlayCells, filledOverlayCells, species) {
   // drawState is either "drawing", "erasing", or undefined.
   let drawState;
 
   function handleMouseDown(e) {
     const cell = e.target;
     if (cell.className === "overlay_cell_filled") {
-      empty(cell);
+      empty(filledOverlayCells, cell);
       drawState = "erasing";
     } else {
-      fill(cell);
+      fill(filledOverlayCells, cell, species);
       drawState = "drawing";
     }
   }
 
   function handleMouseOver(e) {
-    drawOrErase(drawState, e.target);
+    drawOrErase(drawState, filledOverlayCells, e.target, species);
   }
 
   function handleMouseUp(e) {
@@ -178,7 +163,7 @@ function newMouseDraw(overlayCells, fill, empty, drawOrErase) {
 // TouchDraw only draws when a single touch moves. It doesn't draw when a
 // single touch starts, in order to prevent accidental drawing in case of a
 // multi-touch pan/zoom. As a result, we need some other way to handle taps.
-function newTouchDraw(overlayCells, drawOrErase) {
+function newTouchDraw(overlayCells, filledOverlayCells, species) {
   // drawState is either "drawing", "erasing", or undefined.
   let drawState;
 
@@ -211,7 +196,7 @@ function newTouchDraw(overlayCells, drawOrErase) {
       // Touch moved outside of overlay_cells.
       return;
     }
-    drawOrErase(drawState, el);
+    drawOrErase(drawState, filledOverlayCells, el, species);
   }
 
   function handleTouchEnd(e) {
@@ -245,7 +230,7 @@ function newTouchDraw(overlayCells, drawOrErase) {
 // when a tap ("click") is detected, so MouseDraw should handle taps. Well, on
 // Safari for iOS and DuckDuckGo for Android, waiting for the mousedown event
 // leads to a very obvious delay between tap and response.
-function newTapDraw(overlayCells, fill, empty) {
+function newTapDraw(overlayCells, filledOverlayCells, species) {
   let isTapping = false;
 
   function handleTouchStart(e) {
@@ -272,9 +257,9 @@ function newTapDraw(overlayCells, fill, empty) {
     }
     const cell = e.target;
     if (cell.className === "overlay_cell_filled") {
-      empty(cell);
+      empty(filledOverlayCells, cell);
     } else {
-      fill(cell);
+      fill(filledOverlayCells, cell, species);
     }
     isTapping = false;
     // Prevent further events from firing, including mousedown (and mouseup,
@@ -342,7 +327,7 @@ function newMousePan(view) {
 
 // Protocol supports communication with the WebSocket server, including
 // buffering incoming diffs and applying them to the board.
-function newProtocol(filledOverlayCells, flush) {
+function newProtocol(filledOverlayCells) {
 
   // buffer contains the enqueued diffs from the server.
   const buffer = { value: [] };
@@ -350,7 +335,7 @@ function newProtocol(filledOverlayCells, flush) {
   const isBufferOverflowing = { value: false };
 
   const processor = newProcessor(buffer, dequeueIntervalID, isBufferOverflowing);
-  const ws = newWs(buffer, processor, filledOverlayCells, flush);
+  const ws = newWs(buffer, processor, filledOverlayCells);
   const balancer = newBalancer(ws, dequeueIntervalID, isBufferOverflowing);
 
   return { ws, balancer };
@@ -358,7 +343,7 @@ function newProtocol(filledOverlayCells, flush) {
 
 // Ws supports connecting and disconnecting from the WebSocket server, and
 // submitting the diff produced by function flush to the server.
-function newWs(buffer, processor, filledOverlayCells, flush) {
+function newWs(buffer, processor, filledOverlayCells) {
   let websocket;
 
   function connect() {
@@ -375,7 +360,8 @@ function newWs(buffer, processor, filledOverlayCells, flush) {
     if (filledOverlayCells.size === 0) {
       return;
     }
-    websocket.send(JSON.stringify(flush()));
+    const diff = flush(filledOverlayCells);
+    websocket.send(JSON.stringify(diff));
   }
 
   return { connect, disconnect, submit };
