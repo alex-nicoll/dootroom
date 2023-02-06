@@ -45,7 +45,11 @@ function init() {
   };
   initSpeciesInput(species);
 
-  const {fill, empty, flush} = newEditor(species);
+  // Map where the key is an overlay cell that has been filled, and the value
+  // is the species used to fill that cell.
+  const filledOverlayCells = new Map();
+
+  const {fill, empty, flush} = newEditor(species, filledOverlayCells);
   const drawOrErase = newDrawOrErase(fill, empty);
   const mouseDraw = newMouseDraw(overlayCells, fill, empty, drawOrErase);
   const touchDraw = newTouchDraw(overlayCells, drawOrErase);
@@ -57,7 +61,7 @@ function init() {
 
   initModeSwitch(iconButtons, mouseDraw, touchDraw, tapDraw, mousePan);
 
-  const protocol = newProtocol(flush);
+  const protocol = newProtocol(filledOverlayCells, flush);
 
   // Allow submitting via the submit button.
   iconButtons.namedItem("submit").addEventListener("click", protocol.ws.submit);
@@ -78,11 +82,7 @@ function init() {
 // Editor supports filling, emptying, and flushing the overlay cells (div
 // elements). Flushing means emptying all of the filled overlay cells and
 // converting them to a diff to submit to the server.
-function newEditor(species) {
-
-  // Map where the key is an overlay cell that has been filled, and the value
-  // is the species used to fill that cell.
-  const filledOverlayCells = new Map();
+function newEditor(species, filledOverlayCells) {
 
   function fill(cell) {
     cell.className = "overlay_cell_filled";
@@ -106,9 +106,6 @@ function newEmptyAndFlush(filledOverlayCells) {
   }
 
   function flush() {
-    if (filledOverlayCells.size === 0) {
-      return;
-    }
     const diff = {};
     filledOverlayCells.forEach((species, cell) => {
       const x_ysuffix = cell.id.split(",");
@@ -345,7 +342,7 @@ function newMousePan(view) {
 
 // Protocol supports communication with the WebSocket server, including
 // buffering incoming diffs and applying them to the board.
-function newProtocol(flush) {
+function newProtocol(filledOverlayCells, flush) {
 
   // buffer contains the enqueued diffs from the server.
   const buffer = { value: [] };
@@ -353,7 +350,7 @@ function newProtocol(flush) {
   const isBufferOverflowing = { value: false };
 
   const processor = newProcessor(buffer, dequeueIntervalID, isBufferOverflowing);
-  const ws = newWs(buffer, processor, flush);
+  const ws = newWs(buffer, processor, filledOverlayCells, flush);
   const balancer = newBalancer(ws, dequeueIntervalID, isBufferOverflowing);
 
   return { ws, balancer };
@@ -361,7 +358,7 @@ function newProtocol(flush) {
 
 // Ws supports connecting and disconnecting from the WebSocket server, and
 // submitting the diff produced by function flush to the server.
-function newWs(buffer, processor, flush) {
+function newWs(buffer, processor, filledOverlayCells, flush) {
   let websocket;
 
   function connect() {
@@ -375,6 +372,9 @@ function newWs(buffer, processor, flush) {
   }
 
   function submit() {
+    if (filledOverlayCells.size === 0) {
+      return;
+    }
     websocket.send(JSON.stringify(flush()));
   }
 

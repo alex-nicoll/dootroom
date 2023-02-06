@@ -10,6 +10,7 @@ Clients to test:
 - When the mouse is positioned over an icon button, the icon button changes state. When the mouse is moved off of the icon button, the icon button reverts back to its original state.
 - When a finger is placed on an icon button, the icon button changes state. When the finger is removed, the icon button reverts back to it its original state (previous bug).
 - The page is not scrollable. Header, view, and controls are completely visible.
+- When the submit button is pressed without having drawn any live cells, the game continues to update and the user can continue to submit changes (previous bug: the WebSocket connection would close due to an invalid diff being sent to the server; the game would stop updating and the user would be unable to submit changes).
 
 Draw/erase mode:
 - User can tap on cells with one finger to draw and erase.
