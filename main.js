@@ -492,7 +492,9 @@ function initView(view) {
     isDraggingView = true;
   });
   view.addEventListener("mousemove", (e) => {
-    e.preventDefault();
+    if (isDraggingView) {
+      e.preventDefault();
+    }
   });
   document.addEventListener("mouseup", (e) => {
     isDraggingView = false;
