@@ -1,5 +1,12 @@
 # Adapted from https://www.docker.com/blog/tag/go-env-series/
 
+FROM node:19.6.0-alpine3.17 AS eslint
+WORKDIR /src
+COPY package.json package-lock.json ./
+RUN npm clean-install
+COPY *.js .eslintrc.json ./
+RUN npx eslint ./
+
 FROM golangci/golangci-lint:v1.51.0-alpine AS linter
 
 FROM golang:1.19.5-bullseye AS build
