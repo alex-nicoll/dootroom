@@ -12,10 +12,10 @@ Conway's Game of Life implemented as a chaotic multiplayer game. Clients share a
 ```
 git clone git@github.com:alex-nicoll/multi-life.git
 ```
-3. `cd` into the repository's root directory and run `docker build` as shown below. This will build the application's Go backend from source inside a container, and output an executable named `server`.
+3. `cd` into the repository's root directory and run `build.sh`. This will build the application from source inside a container, and output an executable named `server`.
 ```
 cd multi-life
-DOCKER_BUILDKIT=1 docker build . --output .
+./build.sh
 ```
 4. Run `server`, specifying a port number to listen on.
 ```

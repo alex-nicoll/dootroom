@@ -1,12 +1,25 @@
-name: Continuous Integration
+name: CI
 
 on: [push]
 
 jobs:
-  docker-build:
-    name: Docker build
+
+  go-ci:
+    name: Go CI
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - name: Run docker build
-      run: DOCKER_BUILDKIT=1 docker build .
+    - name: Lint Go code
+      run: DOCKER_BUILDKIT=1 docker build . --target go-lint
+    - name: Test Go code
+      run: DOCKER_BUILDKIT=1 docker build . --target go-test
+    - name: Build binary
+      run: DOCKER_BUILDKIT=1 docker build . --target bin
+
+  js-ci:
+    name: JavaScript CI
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Lint JavaScript code
+      run: DOCKER_BUILDKIT=1 docker build . --target js-lint
