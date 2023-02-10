@@ -28,10 +28,10 @@ function init() {
   // Allow icon buttons to change state when touched or moused over.
   for (let i = 0; i < iconButtons.length; i++) {
     const ib = iconButtons.item(i);
-    ib.addEventListener("pointerenter", (e) => {
+    ib.addEventListener("pointerenter", () => {
       ib.classList.add("icon_button_over");
     });
-    ib.addEventListener("pointerleave", (e) => {
+    ib.addEventListener("pointerleave", () => {
       ib.classList.remove("icon_button_over");
     });
   }
@@ -139,7 +139,7 @@ function newMouseDraw(overlayCells, filledOverlayCells, species) {
     drawOrErase(drawState, filledOverlayCells, e.target, species);
   }
 
-  function handleMouseUp(e) {
+  function handleMouseUp() {
     drawState = undefined;
   }
 
@@ -199,11 +199,11 @@ function newTouchDraw(overlayCells, filledOverlayCells, species) {
     drawOrErase(drawState, filledOverlayCells, el, species);
   }
 
-  function handleTouchEnd(e) {
+  function handleTouchEnd() {
     drawState = undefined;
   }
 
-  function handleTouchCancel(e) {
+  function handleTouchCancel() {
     drawState = undefined;
   }
 
@@ -241,7 +241,7 @@ function newTapDraw(overlayCells, filledOverlayCells, species) {
     isTapping = true;
   }
 
-  function handleTouchMove(e) {
+  function handleTouchMove() {
     isTapping = false;
   }
 
@@ -268,7 +268,7 @@ function newTapDraw(overlayCells, filledOverlayCells, species) {
     e.preventDefault();
   }
 
-  function handleTouchCancel(e) {
+  function handleTouchCancel() {
     isTapping = false;
   }
 
@@ -294,7 +294,7 @@ function newTapDraw(overlayCells, filledOverlayCells, species) {
 function newMousePan(view) {
   let isPanning = false;
 
-  function handleMouseDown(e) {
+  function handleMouseDown() {
     isPanning = true;
   }
 
@@ -305,7 +305,7 @@ function newMousePan(view) {
     }
   }
 
-  function handleMouseUp(e) {
+  function handleMouseUp() {
     isPanning = false;
   }
 
@@ -347,7 +347,7 @@ function newWs(buffer, processor, filledOverlayCells) {
   let websocket;
 
   function connect() {
-    websocket = new WebSocket(`ws:\/\/${document.location.host}`);
+    websocket = new WebSocket(`ws://${document.location.host}`);
     websocket.addEventListener("message", processor);
   }
 
@@ -468,10 +468,10 @@ function initBoardCells() {
 function initModal(iconButtons) {
   // Allow the modal to be opened and closed.
   const modal = document.getElementById("modal_container");
-  iconButtons.namedItem("info").addEventListener("click", (e) => {
+  iconButtons.namedItem("info").addEventListener("click", () => {
     modal.style.visibility = "";
   });
-  iconButtons.namedItem("close").addEventListener("click", (e) => {
+  iconButtons.namedItem("close").addEventListener("click", () => {
     modal.style.visibility = "hidden";
   });
 }
@@ -488,7 +488,7 @@ function initView(view) {
   // Prevent the view from scrolling when the mouse is pressed down inside the
   // view and then dragged to the edge of the view.
   let isDraggingView = false;
-  view.addEventListener("mousedown", (e) => {
+  view.addEventListener("mousedown", () => {
     isDraggingView = true;
   });
   view.addEventListener("mousemove", (e) => {
@@ -496,7 +496,7 @@ function initView(view) {
       e.preventDefault();
     }
   });
-  document.addEventListener("mouseup", (e) => {
+  document.addEventListener("mouseup", () => {
     isDraggingView = false;
   });
 }
@@ -511,7 +511,7 @@ function initModeSwitch(iconButtons, mouseDraw, touchDraw, tapDraw, mousePan) {
   tapDraw.enable();
 
   const move = iconButtons.namedItem("move");
-  move.addEventListener("click", (e) => {
+  move.addEventListener("click", () => {
     if (isPanMode) {
       isPanMode = false;
       mousePan.disable();
@@ -544,7 +544,7 @@ function initVisChangeHandling(protocol) {
   // isPageHidden to determine whether the visibility state actually changed from
   // "hidden" to "visible", thereby preventing a resource leak.
   let isPageHidden = false;
-  document.addEventListener("visibilitychange", (e) => {
+  document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") {
       protocol.balancer.stop();
       protocol.ws.disconnect("page hidden");
