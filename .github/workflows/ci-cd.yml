@@ -1,0 +1,26 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+
+  build-and-deploy:
+    name: Build, push, and deploy application image
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build image
+      run: ./build.sh alexnicoll/multi-life:latest
+    - name: Log in to Docker Hub
+      run: echo ${{ secrets.DOCKERHUB_PASSWORD }} | docker login -u alexnicoll --password-stdin
+    - name: Push image to Docker Hub
+      run: docker push alexnicoll/multi-life:latest
+    - name: Install doctl
+      uses: digitalocean/action-doctl@v2
+      with:
+        token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+    - name: Deploy to DigitalOcean App Platform
+      run: doctl apps create-deployment b19f3788-674a-445e-bf21-8d0f0cbca2bb --wait

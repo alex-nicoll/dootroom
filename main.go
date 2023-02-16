@@ -5,7 +5,6 @@ package main
 import (
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/gorilla/websocket"
 )
@@ -19,7 +18,7 @@ func main() {
 	pl := startPipeline()
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if !websocket.IsWebSocketUpgrade(r) {
-			serveFileNoCache(w, r, "./main.html")
+			serveFileNoCache(w, r, "./assets/main.html")
 			return
 		}
 		conn, err := upgrader.Upgrade(w, r, nil)
@@ -42,15 +41,15 @@ func main() {
 		)
 	})
 	http.HandleFunc("/main.js", func(w http.ResponseWriter, r *http.Request) {
-		serveFileNoCache(w, r, "./main.js")
+		serveFileNoCache(w, r, "./assets/main.js")
 	})
 	http.HandleFunc("/main.css", func(w http.ResponseWriter, r *http.Request) {
-		serveFileNoCache(w, r, "./main.css")
+		serveFileNoCache(w, r, "./assets/main.css")
 	})
 	http.HandleFunc("/beehive_oscillator.png", func(w http.ResponseWriter, r *http.Request) {
-		serveFileNoCache(w, r, "./beehive_oscillator.png")
+		serveFileNoCache(w, r, "./assets/beehive_oscillator.png")
 	})
-	log.Fatal(http.ListenAndServe(":"+os.Args[1], nil))
+	log.Fatal(http.ListenAndServe(":80", nil))
 }
 
 // serveFileNoCache serves a file and directs the client to always request the

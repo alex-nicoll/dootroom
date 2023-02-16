@@ -345,9 +345,15 @@ function newProtocol(filledOverlayCells) {
 // submitting the diff produced by function flush to the server.
 function newWs(buffer, processor, filledOverlayCells) {
   let websocket;
+  let scheme;
+  if (document.location.protocol === "https:") {
+    scheme = "wss";
+  } else {
+    scheme = "ws"
+  }
 
   function connect() {
-    websocket = new WebSocket(`ws://${document.location.host}`);
+    websocket = new WebSocket(`${scheme}://${document.location.host}`);
     websocket.addEventListener("message", processor);
   }
 

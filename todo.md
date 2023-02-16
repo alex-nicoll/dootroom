@@ -12,7 +12,6 @@
 - Pick appropriate WebSocket buffer sizes to pass to Upgrader. See Gorilla WebSocket documentation.
 - Look into using Gorilla WebSocket readJSON and writeJSON methods
 - Browser testing with Selenium (or BrowserStack/LambdaTest to hit macOS)
-- Continuous deployment
 - Design doc. This would be a good place to explain that gol+hub+writePump maintains the order of InitListener and Tick messages, so that the client stays in sync with the server.
 
 Features:
