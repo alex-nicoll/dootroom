@@ -20,15 +20,8 @@ The application should now be running at http://localhost:8080.
 
 ## Development
 
-To develop multi-life, you will need Docker Engine and a POSIX shell. Use `build.sh` to build and test the application. You may specify a name and optional tag for the image (the default is multi-life:latest). E.g.,
+To develop multi-life, you will need Docker Engine and a POSIX shell. Use `run.sh` to build and run the application image. You may specify a name and optional tag for the image (the default is multi-life:latest). I.e.,
 ```
-./build.sh <name:tag>
+./run.sh <name:tag>
 ```
-To run the image,
-```
-docker run -it --rm -p 8080:80 multi-life
-```
-You can also bind-mount the assets directory to update the files being served without having to rebuild and restart the image. This is useful for making rapid changes to the client-side code.
-```
-docker run -it --rm -p 8080:80 -v <absolute-path-to-assets>:/assets multi-life
-```
+`run.sh` also bind-mounts the host's assets directory into the container's assets directory. This enables you to update the files being served without having to rebuild and restart the image, so you can rapidly iterate on the frontend code.
