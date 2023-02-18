@@ -395,7 +395,7 @@ function newProcessor(buffer, dequeueIntervalID, isBufferOverflowing) {
   const dequeueInterval = 170;
 
   function checkForBufferOverflow() {
-    isBufferOverflowing.value = buffer.length >= 6;
+    isBufferOverflowing.value = buffer.value.length >= 6;
   }
 
   function dequeue() {
@@ -404,7 +404,7 @@ function newProcessor(buffer, dequeueIntervalID, isBufferOverflowing) {
     }
     const json = buffer.value.shift();
     checkForBufferOverflow();
-    if (json === "{}" && buffer.length === 0) {
+    if (json === "{}" && buffer.value.length === 0) {
       // We've reached the end of the current stream and there are no further
       // diffs, so we can stop dequeueing. enqueue will start us dequeuing
       // again when appropriate.
