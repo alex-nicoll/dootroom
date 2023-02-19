@@ -29,6 +29,7 @@ Draw/erase mode:
 - Tapping on the overlay padding with one finger does not cause the entire overlay to change state.
 - Touching one finger to an empty overlay cell and then sliding the finger over the overlay padding does not cause the entire overlay to change state. Further sliding the finger over a non-overlay element does not cause that element to change state. Further sliding the finger outside of the viewport does not cause an error to be logged (previous bug).
 - Tapping the move button causes it to gain a border, and does not cause any of the other buttons in the control area to move (previous bug).
+- Draw something, switch tabs/windows, switch back and immediately submit changes before the board starts to update. The changes should remain on the overlay, unsubmitted (previous bug: the changes disappear and an error is logged to the console).
 
 Pan mode:
 - User can place one finger on the overlay and move it to pan.

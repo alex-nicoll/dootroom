@@ -363,7 +363,11 @@ function newWs(buffer, processor, filledOverlayCells) {
   }
 
   function submit() {
-    if (filledOverlayCells.size === 0) {
+    if (filledOverlayCells.size === 0 ||
+      websocket === undefined ||
+      websocket.readyState !== 1) {
+      // There are no changes to submit, or connect hasn't been called yet,
+      // or the connection is not in the OPEN state.
       return;
     }
     const diff = flush(filledOverlayCells);
