@@ -61,22 +61,24 @@ function init() {
 
   initModeSwitch(iconButtons, mouseDraw, touchDraw, tapDraw, mousePan);
 
-  const protocol = newProtocol(filledOverlayCells);
+  const processor = newProcessor();
+  const ws = newWs(processor, filledOverlayCells);
+  const balancer = newBalancer(ws, processor);
 
   // Allow submitting via the submit button.
-  iconButtons.namedItem("submit").addEventListener("click", protocol.ws.submit);
+  iconButtons.namedItem("submit").addEventListener("click", ws.submit);
   // Allow submitting via the Enter key.
   document.addEventListener("keydown", (e) => {
     if (e.code === "Enter") {
-      protocol.ws.submit();
+      ws.submit();
     }
   });
-  initVisChangeHandling(protocol);
+  initVisChangeHandling(ws, balancer);
 
-  protocol.balancer.start();
+  balancer.start();
   // Use setTimeout to ensure that all the costly DOM updates in this script
   // complete before we start receiving messages to process.
-  setTimeout(protocol.ws.connect, 0);
+  setTimeout(ws.connect, 0);
 }
 
 function fill(filledOverlayCells, cell, species) {
@@ -327,25 +329,9 @@ function newMousePan(view) {
   return { enable, disable };
 }
 
-// Protocol supports communication with the WebSocket server, including
-// buffering incoming diffs and applying them to the board.
-function newProtocol(filledOverlayCells) {
-
-  // buffer contains the enqueued diffs from the server.
-  const buffer = { value: [] };
-  const dequeueIntervalID = { value: undefined };
-  const isBufferOverflowing = { value: false };
-
-  const processor = newProcessor(buffer, dequeueIntervalID, isBufferOverflowing);
-  const ws = newWs(buffer, processor, filledOverlayCells);
-  const balancer = newBalancer(ws, dequeueIntervalID, isBufferOverflowing);
-
-  return { ws, balancer };
-}
-
 // Ws supports connecting and disconnecting from the WebSocket server, and
 // submitting the diff produced by function flush to the server.
-function newWs(buffer, processor, filledOverlayCells) {
+function newWs(processor, filledOverlayCells) {
   let websocket;
   let scheme;
   if (document.location.protocol === "https:") {
@@ -356,12 +342,12 @@ function newWs(buffer, processor, filledOverlayCells) {
 
   function connect() {
     websocket = new WebSocket(`${scheme}://${document.location.host}`);
-    websocket.addEventListener("message", processor);
+    websocket.addEventListener("message", processor.enqueue);
   }
 
   function disconnect(reason) {
     websocket.close(1000, reason);
-    buffer.value = [];
+    processor.clearBuffer();
   }
 
   function submit() {
@@ -379,14 +365,15 @@ function newWs(buffer, processor, filledOverlayCells) {
   return { connect, disconnect, submit };
 }
 
-// Processor treats buffer as a FIFO queue of incoming board diffs.
-// newProcessor returns a function that takes a WebSocket message and adds the
-// diff contained within to buffer. Diffs are dequeued, parsed, and applied to
-// the board at a regular interval.
+// Processor maintains a FIFO queue of incoming board diffs.
+//
+// Function enqueue takes a WebSocket message and adds the diff contained
+// within to buffer. Diffs are dequeued, parsed, and applied to the board at a
+// regular interval.
 //
 // When the empty diff ("{}") is dequeued, signaling the end of a stream,
 // dequeueing stops. Dequeueing starts up again as soon as another message is
-// passed to Processor.
+// passed to enqueue.
 //
 // Processor detects buffer overflow. The buffer is considered to be
 // overflowing when it has greater than 5 elements.
@@ -397,50 +384,72 @@ function newWs(buffer, processor, filledOverlayCells) {
 // as if it were a diff, would incur a slight delay.
 //
 // See protocol.md for more information.
-function newProcessor(buffer, dequeueIntervalID, isBufferOverflowing) {
+function newProcessor() {
+
   const dequeueInterval = 170;
+  let buffer = [];
+  // Prefix with _ to avoid clashing with the similarly named function.
+  let _isBufferOverflowing = false;
+  let dequeueIntervalID;
 
-  function checkForBufferOverflow() {
-    isBufferOverflowing.value = buffer.value.length >= 6;
-  }
-
-  function dequeue() {
-    if (buffer.value.length === 0) {
-      return;
-    }
-    const json = buffer.value.shift();
-    checkForBufferOverflow();
-    if (json === "{}" && buffer.value.length === 0) {
-      // We've reached the end of the current stream and there are no further
-      // diffs, so we can stop dequeueing. enqueue will start us dequeuing
-      // again when appropriate.
-      clearInterval(dequeueIntervalID.value);
-      dequeueIntervalID.value = undefined;
-      return;
-    }
-    update(json);
-  }
-
-  return function(message) {
+  function enqueue(message) {
     message.data.text().then((json) => {
-      if (dequeueIntervalID.value === undefined) {
-        dequeueIntervalID.value = setInterval(dequeue, dequeueInterval);
+      if (dequeueIntervalID === undefined) {
+        dequeueIntervalID = setInterval(dequeue, dequeueInterval);
       }
       if (json.startsWith("[")) {
         // Apply the grid message to the board immediately.
         update(json);
         return;
       }
-      buffer.value.push(json);
+      buffer.push(json);
       checkForBufferOverflow();
     });
   }
+
+  function dequeue() {
+    if (buffer.length === 0) {
+      return;
+    }
+    const json = buffer.shift();
+    checkForBufferOverflow();
+    if (json === "{}" && buffer.length === 0) {
+      // We've reached the end of the current stream and there are no further
+      // diffs, so we can stop dequeueing. enqueue will start us dequeuing
+      // again when appropriate.
+      clearInterval(dequeueIntervalID);
+      dequeueIntervalID = undefined;
+      return;
+    }
+    update(json);
+  }
+
+  function checkForBufferOverflow() {
+    _isBufferOverflowing = buffer.length >= 6;
+  }
+
+  function isBufferOverflowing() {
+    return _isBufferOverflowing;
+  }
+
+  function clearBuffer() {
+    buffer = [];
+  }
+
+  function stopDequeueing() {
+    if (dequeueIntervalID !== undefined) {
+      clearInterval(dequeueIntervalID);
+      dequeueIntervalID = undefined;
+    }
+  }
+
+  return { enqueue, clearBuffer, isBufferOverflowing, stopDequeueing };
 }
 
 // Balancer periodically checks for buffer overflow, and resets the connection
 // when this is the case. When Balancer is stopped, it will in turn stop
 // Processor.
-function newBalancer(ws, dequeueIntervalID, isBufferOverflowing) {
+function newBalancer(ws, processor) {
 
   const timeBetweenBalances = 8000;
   let balanceBufferTimeoutID;
@@ -450,23 +459,20 @@ function newBalancer(ws, dequeueIntervalID, isBufferOverflowing) {
   }
 
   function stop() {
-    if (dequeueIntervalID.value !== undefined) {
-      clearInterval(dequeueIntervalID.value);
-      dequeueIntervalID.value = undefined;
-    }
+    processor.stopDequeueing();
     clearTimeout(balanceBufferTimeoutID);
     balanceBufferTimeoutID = undefined;
   }
 
   function balanceBuffer() {
-    if (isBufferOverflowing.value) {
+    if (processor.isBufferOverflowing()) {
       ws.disconnect("buffer overflow");
       ws.connect();
     }
     balanceBufferTimeoutID = setTimeout(balanceBuffer, timeBetweenBalances);
   }
 
-  return { start, stop }
+  return { start, stop };
 }
 
 function initBoardCells() {
@@ -539,7 +545,7 @@ function initModeSwitch(iconButtons, mouseDraw, touchDraw, tapDraw, mousePan) {
   });
 }
 
-function initVisChangeHandling(protocol) {
+function initVisChangeHandling(ws, balancer) {
   // Release resources when the page is hidden, and reallocate them when the page
   // becomes visible again.
   // We may get a visibilitychange event with visibilityState "visible" without
@@ -550,13 +556,13 @@ function initVisChangeHandling(protocol) {
   let isPageHidden = false;
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") {
-      protocol.balancer.stop();
-      protocol.ws.disconnect("page hidden");
+      balancer.stop();
+      ws.disconnect("page hidden");
       isPageHidden = true;
     } else if (document.visibilityState === "visible") {
       if (isPageHidden) {
-        protocol.balancer.start();
-        protocol.ws.connect();
+        balancer.start();
+        ws.connect();
         isPageHidden = false;
       }
     }
