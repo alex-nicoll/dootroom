@@ -37,21 +37,23 @@ function init() {
   }
   initModal(iconButtons);
 
+  const speciesInput = document.getElementById("species");
+
   // The species is a seven-character hexadecimal color code. Start with a
   // random value.
-  const species = {
-    value: "#" + 
-      Math.floor(Math.random() * Math.pow(2,24)).toString(16).padStart(6, "0")
-  };
-  initSpeciesInput(species);
+  const initialSpecies = "#" + Math.floor(Math.random() *
+    Math.pow(2,24)).toString(16).padStart(6, "0")
+  speciesInput.value = initialSpecies;
 
-  // Map where the key is an overlay cell that has been filled, and the value
-  // is the species used to fill that cell.
+  // filledOverlayCells is a map where the key is an overlay cell that has been
+  // filled, and the value is the species used to fill that cell.
   const filledOverlayCells = new Map();
 
-  const mouseDraw = newMouseDraw(overlayCells, filledOverlayCells, species);
-  const touchDraw = newTouchDraw(overlayCells, filledOverlayCells, species);
-  const tapDraw = newTapDraw(overlayCells, filledOverlayCells, species);
+  const mouseDraw = newMouseDraw(overlayCells, filledOverlayCells,
+    speciesInput);
+  const touchDraw = newTouchDraw(overlayCells, filledOverlayCells,
+    speciesInput);
+  const tapDraw = newTapDraw(overlayCells, filledOverlayCells, speciesInput);
 
   const view = document.getElementById("view");
   initView(view);
@@ -79,12 +81,12 @@ function init() {
 
 function fill(filledOverlayCells, cell, species) {
   cell.className = "overlay_cell_filled";
-  cell.style.backgroundColor = species.value;
+  cell.style.backgroundColor = species;
   // Store the species along with the cell, to be sent to the server later. We
   // won't be able to use the value of style.backgroundColor, because it may be
   // converted from hexadecimal to something else (e.g., an RGB string),
   // whereas the server accepts only hexadecimal strings.
-  filledOverlayCells.set(cell, species.value);
+  filledOverlayCells.set(cell, species);
 }
 
 function empty(filledOverlayCells, cell) {
@@ -120,7 +122,7 @@ function drawOrErase(drawState, filledOverlayCells, cell, species) {
 }
 
 // MouseDraw allows drawing and erasing by clicking or dragging with a mouse.
-function newMouseDraw(overlayCells, filledOverlayCells, species) {
+function newMouseDraw(overlayCells, filledOverlayCells, speciesInput) {
   // drawState is either "drawing", "erasing", or undefined.
   let drawState;
 
@@ -130,13 +132,13 @@ function newMouseDraw(overlayCells, filledOverlayCells, species) {
       empty(filledOverlayCells, cell);
       drawState = "erasing";
     } else {
-      fill(filledOverlayCells, cell, species);
+      fill(filledOverlayCells, cell, speciesInput.value);
       drawState = "drawing";
     }
   }
 
   function handleMouseOver(e) {
-    drawOrErase(drawState, filledOverlayCells, e.target, species);
+    drawOrErase(drawState, filledOverlayCells, e.target, speciesInput.value);
   }
 
   function handleMouseUp() {
@@ -163,7 +165,7 @@ function newMouseDraw(overlayCells, filledOverlayCells, species) {
 // TouchDraw only draws when a single touch moves. It doesn't draw when a
 // single touch starts, in order to prevent accidental drawing in case of a
 // multi-touch pan/zoom. As a result, we need some other way to handle taps.
-function newTouchDraw(overlayCells, filledOverlayCells, species) {
+function newTouchDraw(overlayCells, filledOverlayCells, speciesInput) {
   // drawState is either "drawing", "erasing", or undefined.
   let drawState;
 
@@ -196,7 +198,7 @@ function newTouchDraw(overlayCells, filledOverlayCells, species) {
       // Touch moved outside of overlay_cells.
       return;
     }
-    drawOrErase(drawState, filledOverlayCells, el, species);
+    drawOrErase(drawState, filledOverlayCells, el, speciesInput.value);
   }
 
   function handleTouchEnd() {
@@ -230,7 +232,7 @@ function newTouchDraw(overlayCells, filledOverlayCells, species) {
 // when a tap ("click") is detected, so MouseDraw should handle taps. Well, on
 // Safari for iOS and DuckDuckGo for Android, waiting for the mousedown event
 // leads to a very obvious delay between tap and response.
-function newTapDraw(overlayCells, filledOverlayCells, species) {
+function newTapDraw(overlayCells, filledOverlayCells, speciesInput) {
   let isTapping = false;
 
   function handleTouchStart(e) {
@@ -259,7 +261,7 @@ function newTapDraw(overlayCells, filledOverlayCells, species) {
     if (cell.className === "overlay_cell_filled") {
       empty(filledOverlayCells, cell);
     } else {
-      fill(filledOverlayCells, cell, species);
+      fill(filledOverlayCells, cell, speciesInput.value);
     }
     isTapping = false;
     // Prevent further events from firing, including mousedown (and mouseup,
@@ -483,14 +485,6 @@ function initModal(iconButtons) {
   });
   iconButtons.namedItem("close").addEventListener("click", () => {
     modal.style.visibility = "hidden";
-  });
-}
-
-function initSpeciesInput(species) {
-  const speciesInput = document.getElementById("species");
-  speciesInput.value = species.value;
-  speciesInput.addEventListener("input", (e) => {
-    species.value = e.target.value;
   });
 }
 
