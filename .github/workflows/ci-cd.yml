@@ -13,7 +13,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Build image
-      run: ./build.sh alexnicoll/multi-life:latest
+      run: ./build.sh "-t alexnicoll/multi-life:latest"
     - name: Log in to Docker Hub
       run: echo ${{ secrets.DOCKERHUB_PASSWORD }} | docker login -u alexnicoll --password-stdin
     - name: Push image to Docker Hub
